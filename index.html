@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gridboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Free Instagram grid planner. Drop your pictures in, drag them into order, keep several layouts, save the grid as an image. No account, nothing uploaded.">
+<meta property="og:title" content="Gridboard">
+<meta property="og:description" content="A free planner for your Instagram grid. No account, nothing uploaded, your pictures stay in your browser.">
+<meta property="og:type" content="website">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gridboard">
+<meta name="theme-color" content="#1e2023">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%231e2023%27/%3E%3Cg fill=%27%23e3a34a%27%3E%3Crect x=%2712%27 y=%2712%27 width=%2711%27 height=%2713%27/%3E%3Crect x=%2726.5%27 y=%2712%27 width=%2711%27 height=%2713%27/%3E%3Crect x=%2741%27 y=%2712%27 width=%2711%27 height=%2713%27/%3E%3Crect x=%2712%27 y=%2728%27 width=%2711%27 height=%2713%27/%3E%3Crect x=%2726.5%27 y=%2728%27 width=%2711%27 height=%2713%27/%3E%3Crect x=%2741%27 y=%2728%27 width=%2711%27 height=%2713%27/%3E%3Crect x=%2712%27 y=%2744%27 width=%2711%27 height=%2713%27 opacity=%27.45%27/%3E%3Crect x=%2726.5%27 y=%2744%27 width=%2711%27 height=%2713%27 opacity=%27.45%27/%3E%3Crect x=%2741%27 y=%2744%27 width=%2711%27 height=%2713%27 opacity=%27.45%27/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* ---- Gridboard: dark-first darkroom palette; light theme swaps consistently ---- */
+:root{
+  --bg:#151618; --panel:#1e2023; --raised:#26292d; --line:#33373c; --line-soft:#2a2d31;
+  --text:#ece9e3; --muted:#9a9891; --faint:#6d6c66;
+  --accent:#e3a34a; --accent-ink:#1a1205; --accent-soft:rgba(227,163,74,.16);
+  --danger:#e06c5c; --ok:#7bb88a;
+  --ig-bg:#000; --ig-text:#f5f5f5; --ig-muted:#a8a8a8; --ig-line:#262626; --ig-btn:#363636; --ig-gap:#000;
+  --shadow:0 18px 40px rgba(0,0,0,.45);
+  --sans:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#e9e8e3; --panel:#f8f7f4; --raised:#ffffff; --line:#d6d4ce; --line-soft:#e2e0da;
+    --text:#1c1b19; --muted:#6d6b65; --faint:#9b9993;
+    --accent:#b8741a; --accent-ink:#fff; --accent-soft:rgba(184,116,26,.14);
+    --danger:#c4473a; --ok:#3f8a55;
+    --ig-bg:#fff; --ig-text:#111; --ig-muted:#737373; --ig-line:#dbdbdb; --ig-btn:#efefef; --ig-gap:#fff;
+    --shadow:0 18px 40px rgba(40,35,20,.18);
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#e9e8e3; --panel:#f8f7f4; --raised:#ffffff; --line:#d6d4ce; --line-soft:#e2e0da;
+  --text:#1c1b19; --muted:#6d6b65; --faint:#9b9993;
+  --accent:#b8741a; --accent-ink:#fff; --accent-soft:rgba(184,116,26,.14);
+  --danger:#c4473a; --ok:#3f8a55;
+  --ig-bg:#fff; --ig-text:#111; --ig-muted:#737373; --ig-line:#dbdbdb; --ig-btn:#efefef; --ig-gap:#fff;
+  --shadow:0 18px 40px rgba(40,35,20,.18);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.4;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+img{max-width:100%;display:block}
+.app{display:grid;grid-template-rows:48px 1fr;height:100dvh}
+
+/* ---- Top bar ---- */
+.top{display:flex;align-items:center;gap:14px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand b{font-family:var(--serif);font-weight:400;font-size:22px;letter-spacing:.01em}
+.brand span{font-size:11px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+.top .grow{flex:1}
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 10px 4px 8px}
+.sync:hover{border-color:var(--muted);color:var(--text)}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.sync.on i{background:var(--ok)}
+.sync.busy i{background:var(--accent)}
+.sync.err i{background:var(--danger)}
+
+/* ---- Buttons ---- */
+.btn{border:1px solid var(--line);background:var(--raised);border-radius:6px;padding:6px 10px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:4px 8px;font-size:12px}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn svg{width:14px;height:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;padding:4px 11px;font-size:12px;color:var(--muted)}
+.seg button.on{background:var(--raised);color:var(--text)}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text)}
+.chk input{accent-color:var(--accent);width:15px;height:15px;margin:0}
+
+/* ---- Body: three rails ---- */
+.body{display:grid;grid-template-columns:250px 1fr 290px;min-height:0}
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.rail.right{border-right:0;border-left:1px solid var(--line)}
+.rail h3{margin:0;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.rail-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px}
+.rail-body{overflow:auto;min-height:0;padding:0 14px 14px}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.field input,.field textarea,.field select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;width:100%}
+.field textarea{resize:vertical;min-height:52px}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+hr.sep{border:0;border-top:1px solid var(--line-soft);margin:12px 0}
+.hint{font-size:12px;color:var(--muted);line-height:1.45}
+.hint kbd{font-family:var(--mono);font-size:11px;background:var(--raised);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+
+/* ---- Library ---- */
+.drop{margin:0 14px 10px;border:1px dashed var(--line);border-radius:8px;padding:12px;text-align:center;color:var(--muted);font-size:12px;line-height:1.4;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}
+.drop b{display:block;color:var(--text);font-weight:500;font-size:13px;margin-bottom:2px}
+.lib{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lib .it{position:relative;aspect-ratio:1;border-radius:4px;overflow:hidden;background:var(--raised);cursor:grab;touch-action:pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.lib .it img{width:100%;height:100%;object-fit:cover;pointer-events:none}
+.lib .it.placed img{opacity:.35}
+.lib .it.placed::after{content:"";position:absolute;right:4px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel)}
+.lib .it .del{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:18px;padding:0;opacity:0}
+.lib .it:hover .del{opacity:1}
+.lib-empty{color:var(--faint);font-size:12px;padding:8px 2px}
+.count{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+/* ---- Stage ---- */
+.stage{position:relative;overflow:auto;min-height:0;display:flex;justify-content:center;align-items:flex-start;padding:22px 20px 40px;background:
+  radial-gradient(1200px 600px at 50% -10%, rgba(227,163,74,.06), transparent 60%);}
+.stage.over::after{content:"Drop to add";position:absolute;inset:12px;border:2px dashed var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:16px;pointer-events:none;background:var(--accent-soft)}
+.phone{width:390px;flex:none;border-radius:44px;background:#0a0a0a;padding:12px;box-shadow:var(--shadow),inset 0 0 0 2px #2a2a2a}
+.screen{background:var(--ig-bg);color:var(--ig-text);border-radius:34px;overflow:hidden;min-height:760px}
+.stage.board .phone{width:min(100%,760px);border-radius:12px;padding:0;background:transparent;box-shadow:none}
+.stage.board .screen{border-radius:8px;min-height:0;background:transparent;color:var(--text)}
+.stage.board .ig{display:none}
+.ig{padding:10px 16px 0;font-family:var(--sans)}
+.ig-top{display:flex;align-items:center;gap:8px;font-weight:600;font-size:16px;padding:10px 0 6px}
+.ig-top .lock{width:13px;height:13px;opacity:.8}
+.ig-top .grow{flex:1}
+.ig-top svg{width:22px;height:22px}
+.ig-head{display:flex;align-items:center;gap:22px;padding:8px 0}
+.ava{width:84px;height:84px;border-radius:50%;background:var(--ig-btn);overflow:hidden;flex:none;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;color:var(--ig-muted);font-size:11px;text-align:center}
+.ava img{width:100%;height:100%;object-fit:cover}
+.stats{display:flex;flex:1;justify-content:space-around;text-align:center}
+.stats b{display:block;font-size:17px;font-weight:600}
+.stats span{font-size:13px}
+.stats [contenteditable]{outline:0;border-bottom:1px dashed transparent}
+.stats [contenteditable]:hover{border-bottom-color:var(--ig-muted)}
+.ig-bio{font-size:14px;line-height:1.35;padding:2px 0 10px}
+.ig-bio b{display:block;font-weight:600}
+.ig-bio [contenteditable]{outline:0}
+.ig-bio .b{white-space:pre-wrap}
+.ig-btns{display:flex;gap:6px;padding-bottom:12px}
+.ig-btns div{flex:1;background:var(--ig-btn);border-radius:8px;text-align:center;font-weight:600;font-size:14px;padding:7px 0}
+.ig-btns div.f{background:#0095f6;color:#fff}
+.ig-btns div.sq{flex:0 0 36px}
+.ig-tabs{display:flex;border-top:1px solid var(--ig-line);margin:0 -16px}
+.ig-tabs div{flex:1;display:flex;justify-content:center;padding:10px 0;border-bottom:1px solid transparent;opacity:.45}
+.ig-tabs div.on{border-bottom-color:var(--ig-text);opacity:1}
+.ig-tabs svg{width:22px;height:22px}
+
+/* ---- The grid ---- */
+.gridwrap{position:relative;padding:0}
+.grid{position:relative;width:100%;background:var(--ig-gap);touch-action:pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.tile{position:absolute;left:0;top:0;overflow:hidden;background:var(--raised);transition:transform .2s cubic-bezier(.2,.7,.2,1);will-change:transform;cursor:grab}
+.tile img{width:100%;height:100%;object-fit:cover;pointer-events:none;transform-origin:50% 50%}
+.tile.dragging{transition:none;z-index:20;cursor:grabbing;box-shadow:0 14px 30px rgba(0,0,0,.5);transform-origin:center}
+.tile.dragging img{filter:brightness(1.02)}
+.tile.temp{outline:2px dashed var(--accent);outline-offset:-2px}
+.tile.sel{outline:3px solid var(--accent);outline-offset:-3px;z-index:5}
+.tile.posted img{opacity:.9}
+.tile .mk{position:absolute;right:6px;top:6px;width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));display:none}
+.tile .mk svg{width:18px;height:18px;fill:#fff}
+.tile.carousel .mk.car,.tile.reel .mk.reel{display:block}
+.tile .ord{position:absolute;left:6px;bottom:6px;font-family:var(--mono);font-size:11px;font-weight:500;background:var(--accent);color:var(--accent-ink);border-radius:999px;min-width:20px;height:20px;padding:0 6px;display:none;align-items:center;justify-content:center;line-height:1}
+.grid.order .tile:not(.posted) .ord{display:inline-flex}
+.tile .pst{position:absolute;left:6px;bottom:6px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;background:rgba(0,0,0,.62);color:#fff;border-radius:3px;padding:2px 5px;display:none}
+.tile.posted .pst{display:block}
+.tile .note{position:absolute;left:0;right:0;top:0;padding:4px 6px;font-size:11px;background:linear-gradient(rgba(0,0,0,.65),transparent);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none}
+.grid.notes .tile .note:not(:empty){display:block}
+.slot{position:absolute;left:0;top:0;background:var(--raised);opacity:.5}
+.stage.board .slot{opacity:.7}
+.grid-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;line-height:1.5;padding:20px;pointer-events:none}
+.grid-empty b{display:block;font-family:var(--serif);font-weight:400;font-size:22px;color:var(--text)}
+.dragghost{position:fixed;z-index:50;pointer-events:none;overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,.5);background:var(--raised);opacity:.95}
+.dragghost img{width:100%;height:100%;object-fit:cover}
+
+/* ---- Layouts list ---- */
+.layouts{display:flex;flex-direction:column;gap:4px}
+.lay{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;border:1px solid transparent;cursor:pointer}
+.lay:hover{background:var(--raised)}
+.lay.on{background:var(--raised);border-color:var(--line)}
+.lay .nm{flex:1;font-family:var(--serif);font-size:17px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lay .ct{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.lay .strip{display:flex;gap:1px;flex:none}
+.lay .strip i{width:10px;height:12px;background:var(--line);display:block;overflow:hidden}
+.lay .strip img{width:100%;height:100%;object-fit:cover}
+.layname{font-family:var(--serif);font-size:24px;line-height:1.1;background:transparent;border:0;border-bottom:1px solid transparent;padding:2px 0;width:100%;color:var(--text)}
+.layname:hover,.layname:focus{border-bottom-color:var(--line);outline:0}
+
+/* ---- Inspector ---- */
+.insp-empty{color:var(--faint);font-size:12px;line-height:1.5}
+.insp-img{aspect-ratio:4/5;border-radius:6px;overflow:hidden;background:var(--raised);margin-bottom:10px;position:relative}
+.insp-img img{width:100%;height:100%;object-fit:cover}
+.insp-name{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px}
+.types{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.types button{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 4px;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted)}
+.types button svg{width:16px;height:16px;fill:currentColor}
+.types button.on{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}
+
+/* ---- Crop editor ---- */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal.open{display:flex}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;width:min(560px,100%);box-shadow:var(--shadow);max-height:100%;overflow:auto}
+.sheet h2{font-family:var(--serif);font-weight:400;font-size:24px;margin:0 0 4px}
+.sheet .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
+.cropstage{display:flex;justify-content:center;margin-bottom:12px}
+.cropbox{position:relative;width:min(340px,80vw);background:#000;overflow:hidden;cursor:grab;touch-action:none;-webkit-touch-callout:none}
+.cropbox img{width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none}
+.cropbox::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 33.3%,rgba(255,255,255,.35) 33.3%,rgba(255,255,255,.35) calc(33.3% + 1px),transparent calc(33.3% + 1px),transparent 66.6%,rgba(255,255,255,.35) 66.6%,rgba(255,255,255,.35) calc(66.6% + 1px),transparent calc(66.6% + 1px)),linear-gradient(90deg,transparent 33.3%,rgba(255,255,255,.35) 33.3%,rgba(255,255,255,.35) calc(33.3% + 1px),transparent calc(33.3% + 1px),transparent 66.6%,rgba(255,255,255,.35) 66.6%,rgba(255,255,255,.35) calc(66.6% + 1px),transparent calc(66.6% + 1px));pointer-events:none}
+.sheet .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+input[type=range]{accent-color:var(--accent);width:100%}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+.keys kbd{font-family:var(--mono);font-size:11px;background:var(--raised);border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap}
+
+/* ---- Export panel ---- */
+.export-preview{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg);max-height:50vh}
+.export-preview img{width:100%;height:auto;max-height:50vh;object-fit:contain}
+
+/* ---- Toast ---- */
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--raised);border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:120;pointer-events:none;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---- Mobile ---- */
+.tabs{display:none}
+@media (max-width:860px){
+  .app{grid-template-rows:48px 1fr 54px}
+  .body{grid-template-columns:1fr}
+  .rail{display:none;border:0}
+  .stage{display:none;padding:0}
+  .body[data-tab="grid"] .stage{display:flex}
+  .body[data-tab="library"] .rail.left{display:flex}
+  .body[data-tab="layouts"] .rail.right{display:flex}
+  .phone,.stage.board .phone{width:100%;border-radius:0;padding:0;background:transparent;box-shadow:none}
+  .screen{border-radius:0;min-height:100%}
+  .lib{grid-template-columns:repeat(4,1fr)}
+  .tabs{display:flex;border-top:1px solid var(--line);background:var(--panel);padding-bottom:env(safe-area-inset-bottom)}
+  .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0}
+  .tabs button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6}
+  .tabs button.on{color:var(--accent)}
+  .top .desk{display:none}
+}
+@media (prefers-reduced-motion: reduce){.tile{transition:none}.toast{transition:none}}
+</style>
+
+</head>
+<body>
+<script>window.GB_PUBLIC=true</script>
+<div class="app">
+  <div class="top">
+    <div class="brand"><b>Gridboard</b><span>Instagram planner</span></div>
+    <div class="grow"></div>
+    <div class="seg desk" id="stageSeg"><button data-v="phone" class="on">Phone</button><button data-v="board">Board</button></div>
+    <div class="seg" id="ratioSeg"><button data-v="4:5" class="on">4:5</button><button data-v="1:1">1:1</button></div>
+    <button class="btn ghost sm desk" id="undoBtn" title="Undo (⌘Z)">Undo</button>
+    <button class="btn sm" id="exportBtn">Save grid image</button>
+    <button class="btn ghost sm desk" id="keysBtn" title="Keyboard shortcuts (?)">?</button>
+    <button class="btn ghost sm" id="aboutBtn" hidden>About</button>
+    <button class="sync" id="sync" title="Where this board is stored"><i></i><span>On this device</span></button>
+  </div>
+
+  <div class="body" id="body" data-tab="grid">
+    <!-- Library -->
+    <aside class="rail left">
+      <div class="rail-head"><h3>Library</h3><span class="count" id="libCount"></span></div>
+      <div class="drop" id="dropZone"><b>Add images</b>Drop files here, click to browse, or paste. Order in the grid is yours to move.</div>
+      <input type="file" id="fileIn" accept="image/*" multiple hidden>
+      <div class="rail-body">
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn sm" id="addAllBtn">Place all unplaced</button>
+        </div>
+        <div class="lib" id="lib"></div>
+        <div class="lib-empty" id="libEmpty">Nothing here yet. JPG, PNG, WebP work; HEIC from an iPhone needs converting first.</div>
+      </div>
+    </aside>
+
+    <!-- Stage -->
+    <main class="stage" id="stage">
+      <div class="phone">
+        <div class="screen">
+          <div class="ig">
+            <div class="ig-top"><svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span id="igUser" contenteditable="true" spellcheck="false">solstories.co</span><span class="grow"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </div>
+            <div class="ig-head">
+              <div class="ava" id="ava" title="Click to set the profile photo">Profile photo</div>
+              <input type="file" id="avaIn" accept="image/*" hidden>
+              <div class="stats">
+                <div><b id="stPosts">0</b><span>posts</span></div>
+                <div><b id="stFollowers" contenteditable="true">1,204</b><span>followers</span></div>
+                <div><b id="stFollowing" contenteditable="true">86</b><span>following</span></div>
+              </div>
+            </div>
+            <div class="ig-bio"><b id="igName" contenteditable="true" spellcheck="false">Sol Stories</b><div class="b" id="igBio" contenteditable="true" spellcheck="false">Personalised storybooks, drawn from a photo of your child.</div></div>
+            <div class="ig-btns"><div class="f">Follow</div><div>Message</div><div class="sq">▾</div></div>
+            <div class="ig-tabs">
+              <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></div>
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18M8 3l3 6M14 3l3 6M10 13l5 3-5 3z"/></svg></div>
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l3 5h5l-4 4 1 6-5-3-5 3 1-6-4-4h5z"/></svg></div>
+            </div>
+          </div>
+          <div class="gridwrap">
+            <div class="grid" id="grid"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Layouts + inspector -->
+    <aside class="rail right">
+      <div class="rail-body" style="padding-top:12px">
+        <input class="layname" id="layName" value="" spellcheck="false" aria-label="Layout name">
+        <div class="row" style="margin:8px 0 12px">
+          <button class="btn sm" id="dupBtn">Duplicate</button>
+          <button class="btn sm ghost" id="newBtn">New</button>
+          <span style="flex:1"></span>
+          <button class="btn sm ghost danger" id="delLayBtn">Delete</button>
+        </div>
+        <h3 style="margin-bottom:6px">Layouts</h3>
+        <div class="layouts" id="layouts"></div>
+        <hr class="sep">
+        <h3 style="margin-bottom:8px">Selected tile</h3>
+        <div id="insp"><div class="insp-empty">Click a tile to mark it posted, set it as a carousel or reel, adjust the crop, or add a note.</div></div>
+        <hr class="sep">
+        <h3 style="margin-bottom:8px">View</h3>
+        <label class="chk"><input type="checkbox" id="optGap" checked> Show gaps between tiles</label>
+        <label class="chk" style="margin-top:6px"><input type="checkbox" id="optOrder"> Number the posting order</label>
+        <label class="chk" style="margin-top:6px"><input type="checkbox" id="optNotes"> Show notes on tiles</label>
+        <label class="chk" style="margin-top:6px"><input type="checkbox" id="optHide"> Hide posted tiles</label>
+        <div class="hint" style="margin-top:10px">Newest sits top-left, as on Instagram. The posting order counts up from the bottom of the unposted tiles, so <kbd>1</kbd> is what you post next.</div>
+        <hr class="sep">
+        <button class="btn sm ghost" id="orderTxtBtn">Save posting order (.txt)</button>
+      </div>
+    </aside>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="library"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>Library</button>
+    <button data-tab="grid" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Grid</button>
+    <button data-tab="layouts"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Layouts</button>
+  </nav>
+</div>
+
+<!-- Crop editor -->
+<div class="modal" id="cropModal">
+  <div class="sheet">
+    <h2>Crop</h2>
+    <div class="sub">Drag the picture to place it in the tile. Zoom to tighten.</div>
+    <div class="cropstage"><div class="cropbox" id="cropBox"><img id="cropImg" alt=""></div></div>
+    <div class="field"><label>Zoom</label><input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1"></div>
+    <div class="foot"><button class="btn ghost" id="cropReset">Reset</button><span style="flex:1"></span><button class="btn ghost" id="cropCancel">Cancel</button><button class="btn primary" id="cropDone">Done</button></div>
+  </div>
+</div>
+
+<!-- About (the public build) -->
+<div class="modal" id="aboutModal">
+  <div class="sheet">
+    <h2>Gridboard</h2>
+    <div class="sub">A free planner for your Instagram grid.</div>
+    <div class="hint" style="font-size:13px;color:var(--text);line-height:1.55">
+      <p style="margin:0 0 10px">Drop your pictures in, drag them into the order you want, keep a few layouts to compare, mark what is already posted, and save the grid as an image when you are happy.</p>
+      <p style="margin:0 0 10px"><b>Your pictures never leave this browser.</b> There is no account, nothing is uploaded, and nothing to pay. The board is kept in this browser's own storage, so it is here when you come back on this device. Clearing the browser's site data clears the board, so save the grid image for anything you want to keep.</p>
+      <p style="margin:0 0 10px">Tiles are 4:5, the shape Instagram's profile grid has shown since 2025. 1:1 is there for the old look. On a phone, hold a tile for a moment before dragging it.</p>
+      <p style="margin:0">Gridboard is not affiliated with Instagram or Meta. Made in Australia.</p>
+    </div>
+    <div class="foot"><button class="btn primary" id="aboutClose">Close</button></div>
+  </div>
+</div>
+
+<!-- Sync -->
+<div class="modal" id="syncModal">
+  <div class="sheet">
+    <h2>On every device</h2>
+    <div id="syncOff">
+      <div class="sub">Turn on sync and this board gets a private link. Open the link on your phone and the same board is there, pictures included. Anyone holding the link can edit the board, so keep it to yourself.</div>
+      <div class="row wrap" style="margin-bottom:14px"><button class="btn primary" id="syncOn">Turn on sync</button></div>
+      <div class="field"><label>Already have a board link?</label><div class="row"><input id="syncPaste" placeholder="Paste the link or code here"><button class="btn" id="syncJoin">Open</button></div></div>
+      <div class="hint">Joining a link merges this device's board into it. Pictures live on your own storage, shrunk to grid size.</div>
+    </div>
+    <div id="syncOnBox" hidden>
+      <div class="sub">This board is synced. Open this link on any device, or scan it from your phone's camera. Bookmark it or add it to the home screen and it stays.</div>
+      <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div id="syncQR" style="background:#fff;padding:8px;border-radius:8px;flex:none"></div>
+        <div style="flex:1;min-width:200px">
+          <div class="field"><label>Your board link</label><input id="syncLink" readonly></div>
+          <div class="row wrap"><button class="btn" id="syncCopy">Copy link</button><button class="btn ghost" id="syncShare" hidden>Share…</button></div>
+          <div class="hint" style="margin-top:12px">Last synced: <span id="syncWhen">just now</span></div>
+        </div>
+      </div>
+      <hr class="sep">
+      <button class="btn ghost sm danger" id="syncStop">Stop syncing on this device</button>
+      <div class="hint" style="margin-top:6px">The board stays on the other devices and in the cloud; this one goes back to its own copy.</div>
+    </div>
+    <div class="foot"><button class="btn primary" id="syncClose">Done</button></div>
+  </div>
+</div>
+
+<!-- Keys -->
+<div class="modal" id="keysModal">
+  <div class="sheet">
+    <h2>Shortcuts</h2>
+    <div class="keys">
+      <kbd>drag</kbd><span>Move a tile. On a phone, hold for a moment first.</span>
+      <kbd>click</kbd><span>Select a tile</span>
+      <kbd>← →</kbd><span>Move the selected tile one place</span>
+      <kbd>↑ ↓</kbd><span>Move it a whole row</span>
+      <kbd>⌘↑ / ⌘↓</kbd><span>Send it to the top / bottom</span>
+      <kbd>P</kbd><span>Toggle posted</span>
+      <kbd>1 2 3</kbd><span>Post / carousel / reel</span>
+      <kbd>C</kbd><span>Crop</span>
+      <kbd>⌫</kbd><span>Take it off the grid (stays in the library)</span>
+      <kbd>⌘Z / ⇧⌘Z</kbd><span>Undo / redo</span>
+      <kbd>⌘V</kbd><span>Paste an image from the clipboard</span>
+      <kbd>Esc</kbd><span>Deselect</span>
+    </div>
+    <div class="foot"><button class="btn primary" id="keysClose">Close</button></div>
+  </div>
+</div>
+
+<!-- Export -->
+<div class="modal" id="exportModal">
+  <div class="sheet">
+    <h2>Grid image</h2>
+    <div class="sub" id="exportSub"></div>
+    <div class="export-preview"><img id="exportImg" alt="Exported grid"></div>
+    <div class="foot"><button class="btn ghost" id="exportClose">Close</button><a class="btn primary" id="exportDl" download="gridboard.png">Download</a></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+// The public build (tools/gridboard-public.sh) sets this: no sync, no house defaults, an About sheet.
+const PUBLIC=!!window.GB_PUBLIC;
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ICON={
+  car:'<svg viewBox="0 0 24 24"><path d="M7 4h11a3 3 0 0 1 3 3v11h-2V7a1 1 0 0 0-1-1H7V4zM3 8h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/></svg>',
+  reel:'<svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm-3 6h16V7a3 3 0 0 0-1-2.2L16.8 8zm7.6 0l-2.2-4H7.9l2.2 4zm-4.4 0L5.1 4.4A3 3 0 0 0 4 7v1zM4 10v7a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-7zm6 2.5l5 2.5-5 2.5z"/></svg>'
+};
+
+/* ---------- state ---------- */
+const DEFAULTS={ratio:'4:5',gap:true,hidePosted:false,order:false,notes:false,stage:'phone',username:'solstories.co',name:'Sol Stories',bio:'Personalised storybooks, drawn from a photo of your child.',followers:'1,204',following:'86',avatar:null,updated:0};
+if(PUBLIC)Object.assign(DEFAULTS,{username:'yourname',name:'Your name',bio:'What you post, in a line or two.',followers:'1,204',following:'86'});
+let S={v:1,images:{},layouts:[],current:null,deleted:{},settings:{...DEFAULTS}};
+const urls=new Map();   // image id -> object URL (display)
+const turls=new Map();  // image id -> object URL (thumb)
+let selected=null, hist=[], redo=[];
+
+const cur=()=>S.layouts.find(l=>l.id===S.current)||S.layouts[0];
+const ratioH=()=>S.settings.ratio==='1:1'?1:1.25;
+
+/* ---------- IndexedDB ---------- */
+let dbp;
+function idb(){
+  if(dbp) return dbp;
+  dbp=new Promise((res,rej)=>{
+    const r=indexedDB.open('gridboard',1);
+    r.onupgradeneeded=()=>{const d=r.result;['meta','blobs','thumbs'].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n)})};
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+  return dbp;
+}
+async function iget(store,key){const d=await idb().catch(()=>null);if(!d)return undefined;return new Promise((res,rej)=>{const t=d.transaction(store).objectStore(store).get(key);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)})}
+async function iput(store,key,val){try{const d=await idb();await new Promise((res,rej)=>{const t=d.transaction(store,'readwrite');t.objectStore(store).put(val,key);t.oncomplete=res;t.onerror=()=>rej(t.error)})}catch(e){storageWarn(e)}}
+async function idel(store,key){try{const d=await idb();await new Promise((res,rej)=>{const t=d.transaction(store,'readwrite');t.objectStore(store).delete(key);t.oncomplete=res;t.onerror=()=>rej(t.error)})}catch(e){storageWarn(e)}}
+let warned=false;function storageWarn(e){console.warn('storage',e);if(!warned){warned=true;toast('This browser will not keep the board between visits')}}
+async function ikeys(store){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction(store).objectStore(store).getAllKeys();t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)})}
+
+let saveT;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>iput('meta','state',JSON.parse(JSON.stringify(S))),150)}
+
+/* ---------- image import ---------- */
+async function decode(file){
+  try{return await createImageBitmap(file)}catch(e){}
+  return new Promise((res,rej)=>{const u=URL.createObjectURL(file);const im=new Image();im.onload=()=>{URL.revokeObjectURL(u);res(im)};im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('undecodable'))};im.src=u});
+}
+function scaled(src,maxSide,q,type='image/jpeg'){
+  const w=src.width||src.naturalWidth,h=src.height||src.naturalHeight;
+  const s=Math.min(1,maxSide/Math.max(w,h));
+  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(src,0,0,c.width,c.height);
+  return new Promise(res=>c.toBlob(b=>res(b),type,q));
+}
+async function addFiles(files,at=0,toGrid=true){
+  const list=[...files].filter(f=>f.type.startsWith('image/')||/\.(jpe?g|png|webp|gif|avif|bmp)$/i.test(f.name));
+  if(!list.length){toast('No images in that drop');return}
+  const L=cur(); if(toGrid)snap();
+  let added=0,skipped=0;
+  for(const f of list){
+    let bm;try{bm=await decode(f)}catch(e){skipped++;continue}
+    const id=uid();
+    const w=bm.width,h=bm.height;
+    const disp=await scaled(bm,1400,.86), th=await scaled(bm,480,.8);
+    if(bm.close)bm.close();
+    await iput('blobs',id,disp); await iput('thumbs',id,th);
+    urls.set(id,URL.createObjectURL(disp)); turls.set(id,URL.createObjectURL(th));
+    S.images[id]={id,name:f.name.replace(/\.[^.]+$/,''),w,h,added:Date.now()};
+    if(toGrid){L.tiles.splice(at+added,0,newTile(id))}
+    added++; cloudPushImage(id,disp);
+  }
+  if(toGrid)touch(L); save(); renderAll();
+  toast(added+' added'+(skipped?', '+skipped+' could not be read (HEIC?)':''));
+}
+const newTile=img=>({img,type:'post',posted:false,crop:{x:.5,y:.5,z:1},note:''});
+
+/* ---------- layouts ---------- */
+function newLayout(name,tiles){const l={id:uid(),name:name||'Layout '+(S.layouts.length+1),tiles:tiles||[],created:Date.now(),updated:Date.now()};S.layouts.push(l);S.current=l.id;return l}
+function touch(l){l.updated=Date.now();cloudPushLayout(l.id)}
+function touchSettings(){S.settings.updated=Date.now();cloudPushSettings()}
+
+/* ---------- undo ---------- */
+function snap(){const L=cur();hist.push(JSON.stringify(L.tiles));if(hist.length>80)hist.shift();redo=[];$('#undoBtn').disabled=false}
+function undo(){const L=cur();if(!hist.length)return;redo.push(JSON.stringify(L.tiles));L.tiles=JSON.parse(hist.pop());touch(L);save();renderAll();$('#undoBtn').disabled=!hist.length}
+function redoIt(){const L=cur();if(!redo.length)return;hist.push(JSON.stringify(L.tiles));L.tiles=JSON.parse(redo.pop());touch(L);save();renderAll()}
+
+/* ---------- grid rendering ---------- */
+const grid=$('#grid'), stage=$('#stage');
+const tileEls=new Map();
+function visible(){const L=cur();return S.settings.hidePosted?L.tiles.filter(t=>!t.posted):L.tiles.slice()}
+function metrics(){
+  const W=grid.clientWidth||300, g=S.settings.gap?(stage.classList.contains('board')?3:2):0;
+  const w=(W-2*g)/3, h=w*ratioH();
+  return {W,g,w,h};
+}
+function slotXY(i,m){return {x:(i%3)*(m.w+m.g),y:Math.floor(i/3)*(m.h+m.g)}}
+function applyCrop(img,t){const c=t.crop||{x:.5,y:.5,z:1};img.style.objectPosition=(c.x*100)+'% '+(c.y*100)+'%';img.style.transformOrigin=(c.x*100)+'% '+(c.y*100)+'%';img.style.transform=c.z!==1?'scale('+c.z+')':''}
+function tileEl(t){
+  let el=tileEls.get(t.img);
+  if(!el){
+    el=document.createElement('div');el.className='tile';el.dataset.id=t.img;
+    el.innerHTML='<img alt=""><span class="note"></span><span class="mk car">'+ICON.car+'</span><span class="mk reel">'+ICON.reel+'</span><span class="ord"></span><span class="pst">Posted</span>';
+    el.querySelector('img').src=urls.get(t.img)||turls.get(t.img)||'';
+    tileEls.set(t.img,el);
+  }
+  el.classList.toggle('carousel',t.type==='carousel');el.classList.toggle('reel',t.type==='reel');
+  el.classList.toggle('posted',!!t.posted);el.classList.toggle('temp',!!t._temp);el.classList.toggle('sel',selected===t.img);
+  el.querySelector('.note').textContent=t.note||'';
+  applyCrop(el.querySelector('img'),t);
+  return el;
+}
+function renderGrid(){
+  const L=cur(), vis=visible(), m=metrics();
+  grid.classList.toggle('order',!!S.settings.order);grid.classList.toggle('notes',!!S.settings.notes);
+  const rows=Math.max(3,Math.ceil(vis.length/3)+(vis.length%3===0?1:0));
+  grid.style.height=(rows*(m.h+m.g)-m.g)+'px';
+  const keep=new Set(vis.map(t=>t.img));
+  for(const [id,el] of tileEls){if(!keep.has(id)){el.remove();tileEls.delete(id)}}
+  // empty slots as a faint frame
+
+  grid.querySelectorAll('.slot').forEach(s=>s.remove());
+  for(let i=vis.length;i<rows*3;i++){const s=document.createElement('div');s.className='slot';const p=slotXY(i,m);s.style.cssText='width:'+m.w+'px;height:'+m.h+'px;transform:translate('+p.x+'px,'+p.y+'px)';grid.appendChild(s)}
+  let order=0;
+  const unposted=vis.filter(t=>!t.posted).length;
+  vis.forEach((t,i)=>{
+    const el=tileEl(t); if(el.parentNode!==grid)grid.appendChild(el);
+    if(!t.posted){order++;el.querySelector('.ord').textContent=unposted-order+1}
+    if(drag&&drag.kind==='tile'&&drag.active&&drag.id===t.img)return;
+    el.style.width=m.w+'px';el.style.height=m.h+'px';
+    const p=slotXY(i,m);el.style.transform='translate('+p.x+'px,'+p.y+'px)';
+  });
+  let em=grid.querySelector('.grid-empty');
+  if(!vis.length){if(!em){em=document.createElement('div');em.className='grid-empty';grid.appendChild(em)}em.innerHTML='<div><b>Empty grid</b>'+(Object.keys(S.images).length?'Drag pictures in from the library, or click one to place it.':'Drop pictures anywhere on this page to start.')+'</div>'}
+  else if(em)em.remove();
+  $('#stPosts').textContent=L.tiles.length;
+}
+function renderLib(){
+  const L=cur(), placed=new Set(L.tiles.map(t=>t.img));
+  const lib=$('#lib'); lib.innerHTML='';
+  const imgs=Object.values(S.images).sort((a,b)=>b.added-a.added);
+  imgs.forEach(im=>{
+    const d=document.createElement('div');d.className='it'+(placed.has(im.id)?' placed':'');d.dataset.id=im.id;d.title=im.name+(placed.has(im.id)?' (on the grid)':' — click to place at the top, or drag it in');
+    d.innerHTML='<img alt="" src="'+(turls.get(im.id)||urls.get(im.id)||'')+'"><button class="del" title="Remove from library">×</button>';
+    lib.appendChild(d);
+  });
+  $('#libEmpty').style.display=imgs.length?'none':'';
+  $('#libCount').textContent=imgs.length?(placed.size+' of '+imgs.length+' placed'):'';
+  $('#addAllBtn').disabled=!imgs.some(i=>!placed.has(i.id));
+}
+function renderLayouts(){
+  const box=$('#layouts');box.innerHTML='';
+  S.layouts.slice().sort((a,b)=>b.updated-a.updated).forEach(l=>{
+    const d=document.createElement('div');d.className='lay'+(l.id===S.current?' on':'');d.dataset.id=l.id;
+    const strip=l.tiles.slice(0,6).map(t=>'<i><img alt="" src="'+(turls.get(t.img)||'')+'"></i>').join('');
+    d.innerHTML='<div class="strip">'+strip+'</div><div class="nm"></div><span class="ct">'+l.tiles.length+'</span>';
+    d.querySelector('.nm').textContent=l.name;
+    box.appendChild(d);
+  });
+  $('#layName').value=cur().name;
+  $('#delLayBtn').disabled=S.layouts.length<2;
+}
+function renderInsp(){
+  const box=$('#insp'), L=cur(), t=L.tiles.find(t=>t.img===selected);
+  if(!t){box.innerHTML='<div class="insp-empty">Click a tile to mark it posted, set it as a carousel or reel, adjust the crop, or add a note.</div>';return}
+  const im=S.images[t.img]||{name:''};
+  box.innerHTML='<div class="insp-img"><img alt="" id="inspImg"></div><div class="insp-name"></div>'+
+    '<div class="types">'+['post','carousel','reel'].map(k=>'<button data-t="'+k+'" class="'+(t.type===k?'on':'')+'">'+(k==='post'?'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>':ICON[k==='carousel'?'car':'reel'])+(k[0].toUpperCase()+k.slice(1))+'</button>').join('')+'</div>'+
+    '<label class="chk" style="margin-bottom:10px"><input type="checkbox" id="inspPosted"'+(t.posted?' checked':'')+'> Already posted</label>'+
+    '<div class="field"><label>Note</label><input id="inspNote" placeholder="Caption idea, date, hook…"></div>'+
+    '<div class="row wrap"><button class="btn sm" id="inspCrop">Crop</button><button class="btn sm ghost" id="inspTop">To top</button><button class="btn sm ghost" id="inspBottom">To bottom</button><span style="flex:1"></span><button class="btn sm ghost danger" id="inspRemove">Remove</button></div>';
+  const ii=$('#inspImg');ii.src=urls.get(t.img)||'';applyCrop(ii,t);
+  box.querySelector('.insp-img').style.aspectRatio=S.settings.ratio==='1:1'?'1':'4/5';
+  box.querySelector('.insp-name').textContent=im.name;
+  $('#inspNote').value=t.note||'';
+}
+function renderProfile(){
+  const s=S.settings;
+  $('#igUser').textContent=s.username;$('#igName').textContent=s.name;$('#igBio').textContent=s.bio;
+  $('#stFollowers').textContent=s.followers;$('#stFollowing').textContent=s.following;
+  const a=$('#ava');a.innerHTML=s.avatar?'<img alt="" src="'+s.avatar+'">':'Profile photo';
+  $$('#ratioSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.ratio));
+  $$('#stageSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.stage));
+  stage.classList.toggle('board',s.stage==='board');
+  $('#optGap').checked=s.gap;$('#optOrder').checked=s.order;$('#optNotes').checked=s.notes;$('#optHide').checked=s.hidePosted;
+}
+function renderAll(){renderProfile();renderGrid();renderLib();renderLayouts();renderInsp()}
+
+/* ---------- drag ---------- */
+let drag=null, ghost=null;
+function gridIndexAt(cx,cy,n){
+  const r=grid.getBoundingClientRect(), m=metrics();
+  const px=cx-r.left, py=cy-r.top;
+  if(px<-m.w*.5||px>r.width+m.w*.5||py<-m.h*.5||py>r.height+m.h*.5)return -1;
+  const col=clamp(Math.floor((px+m.g/2)/(m.w+m.g)),0,2), row=Math.max(0,Math.floor((py+m.g/2)/(m.h+m.g)));
+  return clamp(row*3+col,0,n);
+}
+function commitOrder(vis){
+  const L=cur();
+  if(S.settings.hidePosted){const hidden=L.tiles.filter(t=>t.posted);L.tiles=vis.concat(hidden)}else L.tiles=vis;
+}
+function startPointer(e,kind,id,el){
+  if(e.button&&e.button!==0)return;
+  drag={kind,id,el,sx:e.clientX,sy:e.clientY,active:false,ptr:e.pointerId,touch:e.pointerType==='touch'};
+  if(drag.touch){drag.timer=setTimeout(()=>{if(drag&&!drag.active)activate(e.clientX,e.clientY)},260)}
+}
+function activate(cx,cy){
+  const d=drag;d.active=true;
+  try{d.el.setPointerCapture(d.ptr)}catch(e){}
+  if(navigator.vibrate)try{navigator.vibrate(8)}catch(e){}
+  const m=metrics();
+  if(d.kind==='tile'){
+    snap();
+    const r=d.el.getBoundingClientRect();d.ox=cx-r.left;d.oy=cy-r.top;
+    d.el.classList.add('dragging');
+    d.vis=visible();d.idx=d.vis.findIndex(t=>t.img===d.id);
+    select(d.id,false);
+  }else{
+    ghost=document.createElement('div');ghost.className='dragghost';ghost.innerHTML='<img alt="" src="'+(urls.get(d.id)||turls.get(d.id))+'">';
+    ghost.style.width=m.w+'px';ghost.style.height=m.h+'px';document.body.appendChild(ghost);
+    d.ox=m.w/2;d.oy=m.h/2;d.vis=visible();d.idx=-1;d.snapped=false;
+  }
+  moveDrag(cx,cy);
+}
+function moveDrag(cx,cy){
+  const d=drag,m=metrics(),gr=grid.getBoundingClientRect();
+  if(d.kind==='tile'){
+    d.el.style.transform='translate('+(cx-d.ox-gr.left)+'px,'+(cy-d.oy-gr.top)+'px)';
+    const idx=gridIndexAt(cx-d.ox+m.w/2,cy-d.oy+m.h/2,d.vis.length-1);
+    if(idx>=0&&idx!==d.idx){d.vis.splice(idx,0,d.vis.splice(d.idx,1)[0]);d.idx=idx;commitOrder(d.vis);renderGrid()}
+  }else{
+    ghost.style.left=(cx-d.ox)+'px';ghost.style.top=(cy-d.oy)+'px';
+    // the placeholder is a tile like any other once it is in: same move semantics as a tile drag
+    const idx=gridIndexAt(cx,cy,d.idx>=0?d.vis.length-1:d.vis.length);
+    if(idx<0){if(d.idx>=0){d.vis=d.vis.filter(t=>t.img!==d.id);d.idx=-1;commitOrder(d.vis);renderGrid()}}
+    else if(d.idx<0){d.vis.splice(idx,0,{...newTile(d.id),_temp:true});d.idx=idx;commitOrder(d.vis);renderGrid()}
+    else if(idx!==d.idx){d.vis.splice(idx,0,d.vis.splice(d.idx,1)[0]);d.idx=idx;commitOrder(d.vis);renderGrid()}
+  }
+}
+function endDrag(cancel){
+  const d=drag;if(!d)return;drag=null;clearTimeout(d.timer);
+  try{d.el.releasePointerCapture(d.ptr)}catch(e){}
+  if(!d.active)return;
+  const L=cur();
+  if(d.kind==='tile'){
+    d.el.classList.remove('dragging');
+    if(cancel){undo();return}
+    touch(L);save();renderGrid();renderLayouts();
+  }else{
+    if(ghost){ghost.remove();ghost=null}
+    const t=L.tiles.find(t=>t.img===d.id&&t._temp);
+    if(t){ if(cancel){L.tiles=L.tiles.filter(x=>x!==t)} else {snap();delete t._temp;hist[hist.length-1]=JSON.stringify(L.tiles.filter(x=>x!==t));touch(L);save();select(d.id,false)} }
+    renderAll();
+  }
+}
+grid.addEventListener('pointerdown',e=>{const t=e.target.closest('.tile');if(!t||t.classList.contains('temp'))return;startPointer(e,'tile',t.dataset.id,t)});
+$('#lib').addEventListener('pointerdown',e=>{
+  if(e.target.classList.contains('del'))return;
+  const it=e.target.closest('.it');if(!it)return;
+  if(it.classList.contains('placed')){return}
+  startPointer(e,'lib',it.dataset.id,it);
+});
+document.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.ptr)return;
+  if(!drag.active){
+    const dist=Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy);
+    if(drag.touch){if(dist>10){clearTimeout(drag.timer);drag=null}return}
+    if(dist>5)activate(e.clientX,e.clientY);else return;
+  }
+  e.preventDefault();moveDrag(e.clientX,e.clientY);
+});
+document.addEventListener('pointerup',e=>{
+  if(!drag||e.pointerId!==drag.ptr)return;
+  const d=drag;
+  if(!d.active){ // a click
+    drag=null;clearTimeout(d.timer);
+    if(d.kind==='tile')select(d.id===selected?null:d.id);
+    else placeAtTop(d.id);
+    return;
+  }
+  endDrag(false);
+});
+document.addEventListener('pointercancel',e=>{if(drag&&e.pointerId===drag.ptr)endDrag(true)});
+document.addEventListener('touchmove',e=>{if(drag&&drag.active)e.preventDefault()},{passive:false});
+document.addEventListener('contextmenu',e=>{if(drag||e.target.closest('.tile,.lib .it'))e.preventDefault()});
+
+function placeAtTop(id){const L=cur();if(L.tiles.some(t=>t.img===id))return;snap();L.tiles.unshift(newTile(id));touch(L);save();select(id,false);renderAll();toast('Placed at the top')}
+function select(id,render=true){selected=id;if(render){renderGrid();renderInsp()}else{tileEls.forEach((el,k)=>el.classList.toggle('sel',k===id))}}
+
+/* ---------- tile ops ---------- */
+function selTile(){return cur().tiles.find(t=>t.img===selected)}
+function moveSel(delta,abs){
+  const L=cur(), vis=visible(), i=vis.findIndex(t=>t.img===selected);if(i<0)return;
+  let j=abs==='top'?0:abs==='bottom'?vis.length-1:clamp(i+delta,0,vis.length-1);if(j===i)return;
+  snap();vis.splice(j,0,vis.splice(i,1)[0]);commitOrder(vis);touch(L);save();renderGrid();renderLayouts();
+}
+function removeSel(){const L=cur(),t=selTile();if(!t)return;snap();L.tiles=L.tiles.filter(x=>x!==t);touch(L);save();selected=null;renderAll()}
+function setType(k){const t=selTile();if(!t)return;snap();t.type=k;touch(cur());save();renderGrid();renderInsp()}
+function togglePosted(){const t=selTile();if(!t)return;snap();t.posted=!t.posted;touch(cur());save();renderGrid();renderInsp()}
+
+$('#insp').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.t)setType(b.dataset.t);
+  else if(b.id==='inspCrop')openCrop();
+  else if(b.id==='inspTop')moveSel(0,'top');
+  else if(b.id==='inspBottom')moveSel(0,'bottom');
+  else if(b.id==='inspRemove')removeSel();
+});
+$('#insp').addEventListener('change',e=>{if(e.target.id==='inspPosted')togglePosted()});
+$('#insp').addEventListener('input',e=>{if(e.target.id==='inspNote'){const t=selTile();if(t){t.note=e.target.value;touch(cur());save();tileEl(t)}}});
+
+/* ---------- library ---------- */
+$('#lib').addEventListener('click',async e=>{
+  if(!e.target.classList.contains('del'))return;
+  const id=e.target.closest('.it').dataset.id;
+  if(!confirm('Remove this picture from the library and every layout'+(cloud.db?' on every device':'')+'?'))return;
+  await removeImage(id);
+});
+async function removeImage(id){
+  delete S.images[id];S.deleted[id]=Date.now();
+  S.layouts.forEach(l=>{const n=l.tiles.length;l.tiles=l.tiles.filter(t=>t.img!==id);if(l.tiles.length!==n)touch(l)});
+  if(selected===id)selected=null;
+  URL.revokeObjectURL(urls.get(id));URL.revokeObjectURL(turls.get(id));urls.delete(id);turls.delete(id);
+  await idel('blobs',id);await idel('thumbs',id);save();renderAll();cloudDeleteImage(id);
+}
+$('#addAllBtn').addEventListener('click',()=>{
+  const L=cur(),placed=new Set(L.tiles.map(t=>t.img));
+  const un=Object.values(S.images).filter(i=>!placed.has(i.id)).sort((a,b)=>b.added-a.added);
+  if(!un.length)return;snap();un.reverse().forEach(i=>L.tiles.unshift(newTile(i.id)));touch(L);save();renderAll();
+});
+
+/* file inputs, drop, paste */
+$('#dropZone').addEventListener('click',()=>$('#fileIn').click());
+$('#fileIn').addEventListener('change',e=>{addFiles(e.target.files);e.target.value=''});
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();stage.classList.add('over');$('#dropZone').classList.add('over')}));
+document.addEventListener('dragleave',e=>{if(e.relatedTarget===null||e.target===document.documentElement){stage.classList.remove('over');$('#dropZone').classList.remove('over')}});
+document.addEventListener('drop',e=>{
+  if(!e.dataTransfer||!e.dataTransfer.files.length)return;
+  e.preventDefault();stage.classList.remove('over');$('#dropZone').classList.remove('over');
+  let at=0;
+  if(e.target.closest('#grid')){const i=gridIndexAt(e.clientX,e.clientY,visible().length);if(i>=0)at=i}
+  addFiles(e.dataTransfer.files,at,true);
+});
+document.addEventListener('paste',e=>{
+  const files=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));
+  if(files.length){e.preventDefault();addFiles(files)}
+});
+
+/* ---------- profile ---------- */
+$('#ava').addEventListener('click',()=>$('#avaIn').click());
+$('#avaIn').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;e.target.value='';
+  try{const bm=await decode(f);const b=await scaled(bm,240,.85);const r=new FileReader();r.onload=()=>{S.settings.avatar=r.result;touchSettings();save();renderProfile()};r.readAsDataURL(b)}catch(err){toast('Could not read that picture')}
+});
+[['igUser','username'],['igName','name'],['igBio','bio'],['stFollowers','followers'],['stFollowing','following']].forEach(([id,k])=>{
+  const el=document.getElementById(id);
+  el.addEventListener('input',()=>{S.settings[k]=el.textContent;touchSettings();save()});
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'&&k!=='bio'){e.preventDefault();el.blur()}});
+});
+
+/* ---------- controls ---------- */
+$('#ratioSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.settings.ratio=b.dataset.v;touchSettings();save();renderProfile();renderGrid();renderInsp()});
+$('#stageSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.settings.stage=b.dataset.v;save();renderProfile();renderGrid()});
+$('#optGap').addEventListener('change',e=>{S.settings.gap=e.target.checked;touchSettings();save();renderGrid()});
+$('#optOrder').addEventListener('change',e=>{S.settings.order=e.target.checked;save();renderGrid()});
+$('#optNotes').addEventListener('change',e=>{S.settings.notes=e.target.checked;save();renderGrid()});
+$('#optHide').addEventListener('change',e=>{S.settings.hidePosted=e.target.checked;save();renderGrid()});
+$('#undoBtn').addEventListener('click',undo);
+$('#keysBtn').addEventListener('click',()=>$('#keysModal').classList.add('open'));
+$('#keysClose').addEventListener('click',()=>$('#keysModal').classList.remove('open'));
+$$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#body').dataset.tab=b.dataset.tab;$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));if(b.dataset.tab==='grid')requestAnimationFrame(()=>renderGrid())});
+window.addEventListener('resize',()=>renderGrid());
+new ResizeObserver(()=>renderGrid()).observe(grid);
+
+/* layouts */
+$('#layouts').addEventListener('click',e=>{const d=e.target.closest('.lay');if(!d)return;S.current=d.dataset.id;selected=null;hist=[];redo=[];save();renderAll()});
+$('#layName').addEventListener('input',e=>{const L=cur();L.name=e.target.value;touch(L);save();renderLayouts();$('#layName').value=L.name});
+$('#dupBtn').addEventListener('click',()=>{const L=cur();newLayout(L.name+' (copy)',JSON.parse(JSON.stringify(L.tiles)));touch(cur());hist=[];redo=[];save();renderAll();$('#layName').select()});
+$('#newBtn').addEventListener('click',()=>{const L=cur();const keep=L.tiles.filter(t=>t.posted).map(t=>JSON.parse(JSON.stringify(t)));newLayout('',keep);touch(cur());hist=[];redo=[];save();renderAll();$('#layName').select();if(keep.length)toast('New layout, keeping the posted tiles')});
+$('#delLayBtn').addEventListener('click',()=>{const L=cur();if(S.layouts.length<2)return;if(!confirm('Delete "'+L.name+'"? The pictures stay in the library.'))return;S.layouts=S.layouts.filter(l=>l!==L);S.deleted[L.id]=Date.now();S.current=S.layouts[0].id;hist=[];redo=[];save();renderAll();cloudDeleteLayout(L.id)});
+
+/* keyboard */
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||e.target.isContentEditable){if(e.key==='Escape')e.target.blur();return}
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoIt():undo();return}
+  if(e.key==='Escape'){$$('.modal.open').forEach(m=>m.classList.remove('open'));select(null);return}
+  if(e.key==='?'){$('#keysModal').classList.toggle('open');return}
+  if(!selected)return;
+  switch(e.key){
+    case 'ArrowLeft':e.preventDefault();moveSel(-1);break;
+    case 'ArrowRight':e.preventDefault();moveSel(1);break;
+    case 'ArrowUp':e.preventDefault();mod?moveSel(0,'top'):moveSel(-3);break;
+    case 'ArrowDown':e.preventDefault();mod?moveSel(0,'bottom'):moveSel(3);break;
+    case 'Backspace':case 'Delete':e.preventDefault();removeSel();break;
+    case 'p':case 'P':togglePosted();break;
+    case '1':setType('post');break;case '2':setType('carousel');break;case '3':setType('reel');break;
+    case 'c':case 'C':openCrop();break;
+  }
+});
+
+/* ---------- crop editor ---------- */
+let cropT=null, cropWork=null, cropDrag=null;
+function openCrop(){
+  const t=selTile();if(!t)return;cropT=t;cropWork={...t.crop};
+  const box=$('#cropBox');box.style.aspectRatio=S.settings.ratio==='1:1'?'1':'4/5';
+  $('#cropImg').src=urls.get(t.img);$('#cropZoom').value=cropWork.z;paintCrop();$('#cropModal').classList.add('open');
+}
+function paintCrop(){applyCrop($('#cropImg'),{crop:cropWork})}
+$('#cropZoom').addEventListener('input',e=>{cropWork.z=+e.target.value;paintCrop()});
+$('#cropBox').addEventListener('pointerdown',e=>{cropDrag={x:e.clientX,y:e.clientY,cx:cropWork.x,cy:cropWork.y};$('#cropBox').setPointerCapture(e.pointerId)});
+$('#cropBox').addEventListener('pointermove',e=>{
+  if(!cropDrag)return;
+  const im=S.images[cropT.img],r=$('#cropBox').getBoundingClientRect();
+  // how much the picture overhangs the box, in px, at this zoom
+  const s=Math.max(r.width/im.w,r.height/im.h)*cropWork.z, ow=im.w*s-r.width, oh=im.h*s-r.height;
+  const dx=e.clientX-cropDrag.x, dy=e.clientY-cropDrag.y;
+  cropWork.x=clamp(cropDrag.cx-(ow>0?dx/ow:0),0,1);cropWork.y=clamp(cropDrag.cy-(oh>0?dy/oh:0),0,1);paintCrop();
+});
+['pointerup','pointercancel'].forEach(ev=>$('#cropBox').addEventListener(ev,()=>cropDrag=null));
+$('#cropBox').addEventListener('wheel',e=>{e.preventDefault();cropWork.z=clamp(cropWork.z*(e.deltaY<0?1.05:0.95),1,3);$('#cropZoom').value=cropWork.z;paintCrop()},{passive:false});
+$('#cropReset').addEventListener('click',()=>{cropWork={x:.5,y:.5,z:1};$('#cropZoom').value=1;paintCrop()});
+$('#cropCancel').addEventListener('click',()=>$('#cropModal').classList.remove('open'));
+$('#cropDone').addEventListener('click',()=>{snap();cropT.crop={...cropWork};touch(cur());save();$('#cropModal').classList.remove('open');renderGrid();renderInsp()});
+
+/* ---------- export ---------- */
+let downloads=null;
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+async function exportPNG(){
+  const vis=visible();if(!vis.length){toast('Nothing on the grid yet');return}
+  const tw=540, th=Math.round(540*ratioH()), g=S.settings.gap?4:0, rows=Math.ceil(vis.length/3);
+  const c=document.createElement('canvas');c.width=tw*3+g*2;c.height=th*rows+g*(rows-1);
+  const x=c.getContext('2d');x.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ig-gap').trim()||'#000';x.fillRect(0,0,c.width,c.height);
+  for(let i=0;i<vis.length;i++){
+    const t=vis[i],im=S.images[t.img];if(!im)continue;
+    let img;try{img=await loadImg(urls.get(t.img))}catch(e){continue}
+    const cr=t.crop||{x:.5,y:.5,z:1};
+    const s=Math.max(tw/img.width,th/img.height)*cr.z, dw=img.width*s, dh=img.height*s;
+    const ox=(i%3)*(tw+g), oy=Math.floor(i/3)*(th+g);
+    x.save();x.beginPath();x.rect(ox,oy,tw,th);x.clip();
+    x.drawImage(img,ox+cr.x*(tw-dw),oy+cr.y*(th-dh),dw,dh);x.restore();
+  }
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  const name=(cur().name||'grid').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-').toLowerCase()+'.png';
+  if(downloads){
+    try{await downloads.save({filename:name,data:blob});toast('Saved');return}
+    catch(err){if(err&&err.code==='declined')return;if(err&&err.code!=='rate_limited')console.warn(err)}
+  }
+  const u=URL.createObjectURL(blob);$('#exportImg').src=u;$('#exportDl').href=u;$('#exportDl').download=name;
+  $('#exportSub').textContent=c.width+' × '+c.height+' px. '+(window.top!==window?'If the download button does nothing here, right-click the picture and save it.':'');
+  $('#exportModal').classList.add('open');
+}
+$('#exportBtn').addEventListener('click',exportPNG);
+$('#exportClose').addEventListener('click',()=>$('#exportModal').classList.remove('open'));
+$('#orderTxtBtn').addEventListener('click',async()=>{
+  const L=cur(), un=L.tiles.filter(t=>!t.posted).slice().reverse();
+  if(!un.length){toast('No unposted tiles');return}
+  const lines=[L.name,'Posting order, next first','',...un.map((t,i)=>(i+1)+'. '+(S.images[t.img]?.name||'')+(t.type!=='post'?'  ['+t.type+']':'')+(t.note?'  — '+t.note:''))];
+  const txt=lines.join('\n'), name='posting-order.txt';
+  if(downloads){try{await downloads.save({filename:name,data:txt});toast('Saved');return}catch(err){if(err&&err.code==='declined')return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=name;a.click();
+});
+
+/* ---------- toast ---------- */
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
+
+/* ---------- cloud sync: Claude's store inside the artifact, otherwise a board link on Supabase ---------- */
+const SB_FN='https://snsypfnlfgyjxkzllgan.supabase.co/functions/v1/gridboard';
+const cloud={db:null,q:new Map(),via:null,token:null,lastPull:0};
+function boardBackend(token){
+  const call=async(payload)=>{
+    let r;try{r=await fetch(SB_FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,...payload})})}catch(e){const err=new Error('offline');err.code='unavailable';throw err}
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){const err=new Error(j.message||r.statusText);err.code=j.code||'unavailable';throw err}
+    return j;
+  };
+  const snap=(id,d)=>({id,exists:!!d,data:()=>d?d.body:undefined});
+  const doc=(kind,id)=>({get:async()=>snap(id,(await call({op:'get',kind,id})).doc),set:body=>call({op:'set',kind,id,body}),delete:()=>call({op:'del',kind,id})});
+  return {
+    doc:path=>{const [kind,id]=path.split('/');return doc(kind,id)},
+    collection:kind=>({get:async()=>({docs:(await call({op:'list',kind})).docs.map(d=>snap(d.id,d))}),doc:id=>doc(kind,id)}),
+    create:async()=>(await call({op:'create'})).token,
+  };
+}
+const TOKEN_RE=/^[A-Za-z0-9_-]{32}$/;
+function tokenFromText(t){const m=String(t||'').match(/[A-Za-z0-9_-]{32}/);return m&&TOKEN_RE.test(m[0])?m[0]:null}
+function boardLink(){return location.origin+location.pathname+'#b='+cloud.token}
+function rememberToken(t){cloud.token=t;try{t?localStorage.setItem('gridboard.token',t):localStorage.removeItem('gridboard.token')}catch(e){}
+  if(t){if(location.hash!=='#b='+t)history.replaceState(null,'',location.pathname+location.search+'#b='+t)}else if(location.hash.startsWith('#b='))history.replaceState(null,'',location.pathname+location.search)}
+function syncUI(cls,txt){const s=$('#sync');s.className='sync '+cls;s.querySelector('span').textContent=txt}
+function blobToDataURL(b){return new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}
+async function cloudThumb(blob){
+  // a copy small enough for one document (256 KiB cap), still crisp at grid size
+  let bm;try{bm=await createImageBitmap(blob)}catch(e){return null}
+  for(const [side,q] of [[1000,.8],[800,.72],[640,.65],[480,.6]]){
+    const b=await scaled(bm,side,q);if(b.size<200*1024){const d=await blobToDataURL(b);if(bm.close)bm.close();return d}
+  }
+  if(bm.close)bm.close();return null;
+}
+function queue(key,fn){cloud.q.set(key,fn);clearTimeout(cloud.t);cloud.t=setTimeout(flush,900)}
+async function flush(){
+  if(!cloud.db||!cloud.q.size)return;
+  const jobs=[...cloud.q.values()];cloud.q.clear();syncUI('busy','Syncing…');
+  try{for(const j of jobs)await j();syncUI('on','Synced')}catch(e){console.warn('sync',e);syncUI('err',e&&e.code==='quota_exceeded'?'Cloud is full':'Sync failed')}
+}
+function cloudPushLayout(id){if(!cloud.db)return;queue('l:'+id,async()=>{const l=S.layouts.find(x=>x.id===id);if(!l)return;await cloud.db.doc('layouts/'+id).set({name:l.name,tiles:l.tiles.filter(t=>!t._temp),created:l.created,updated:l.updated})})}
+function cloudPushSettings(){if(!cloud.db)return;queue('s',async()=>{await cloud.db.doc('settings/main').set({...S.settings})})}
+function cloudPushImage(id,blob){if(!cloud.db)return;queue('i:'+id,async()=>{const im=S.images[id];if(!im)return;const thumb=await cloudThumb(blob);if(!thumb)return;await cloud.db.doc('images/'+id).set({name:im.name,w:im.w,h:im.h,added:im.added,thumb})})}
+function cloudDeleteImage(id){if(!cloud.db)return;queue('i:'+id,async()=>{await cloud.db.doc('images/'+id).delete()})}
+function cloudDeleteLayout(id){if(!cloud.db)return;queue('l:'+id,async()=>{await cloud.db.doc('layouts/'+id).delete()})}
+async function dataURLToBlob(d){return (await fetch(d)).blob()}
+async function pullCloud(){
+  const db=cloud.db;
+  const [ls,is,ss]=await Promise.all([db.collection('layouts').get(),db.collection('images').get(),db.doc('settings/main').get()]);
+  let changed=false;
+  // images: bring down what this device lacks; push up what the cloud lacks
+  const remoteIds=new Set();
+  for(const d of is.docs){
+    const r=d.data();remoteIds.add(d.id);
+    if(S.deleted[d.id]){queue('i:'+d.id,()=>db.doc('images/'+d.id).delete());continue}
+    if(S.images[d.id])continue;
+    try{let thumb=r.thumb;if(!thumb){const full=await db.doc('images/'+d.id).get();thumb=full.data()&&full.data().thumb}if(!thumb)continue;const b=await dataURLToBlob(thumb);await iput('blobs',d.id,b);const th=await scaled(await createImageBitmap(b),480,.8);await iput('thumbs',d.id,th);urls.set(d.id,URL.createObjectURL(b));turls.set(d.id,URL.createObjectURL(th));S.images[d.id]={id:d.id,name:r.name||'',w:r.w,h:r.h,added:r.added||Date.now()};changed=true}catch(e){console.warn('pull image',e)}
+  }
+  for(const id of Object.keys(S.images)){if(!remoteIds.has(id)){const b=await iget('blobs',id);if(b)cloudPushImage(id,b)}}
+  // layouts: newer wins; an untouched empty starter layout on this device gives way to the board
+  if(ls.docs.length){const before=S.layouts.length;S.layouts=S.layouts.filter(l=>l.tiles.length||ls.docs.some(d=>d.id===l.id));if(S.layouts.length!==before)changed=true}
+  const remoteL=new Set();
+  for(const d of ls.docs){
+    const r=d.data();remoteL.add(d.id);
+    if(S.deleted[d.id]&&S.deleted[d.id]>(r.updated||0)){queue('l:'+d.id,()=>db.doc('layouts/'+d.id).delete());continue}
+    const l=S.layouts.find(x=>x.id===d.id);
+    if(!l){S.layouts.push({id:d.id,name:r.name||'Layout',tiles:(r.tiles||[]).filter(t=>S.images[t.img]),created:r.created||Date.now(),updated:r.updated||0});changed=true}
+    else if((r.updated||0)>(l.updated||0)){l.name=r.name||l.name;l.tiles=(r.tiles||[]).filter(t=>S.images[t.img]);l.updated=r.updated;changed=true}
+  }
+  S.layouts.forEach(l=>{if(!remoteL.has(l.id))cloudPushLayout(l.id)});
+  if(ss.exists){const r=ss.data();if((r.updated||0)>(S.settings.updated||0)){S.settings={...S.settings,...r,stage:S.settings.stage};changed=true}}
+  else cloudPushSettings();
+  if(!S.layouts.length)newLayout('First layout');
+  if(!S.layouts.some(l=>l.id===S.current))S.current=S.layouts[0].id;
+  cloud.lastPull=Date.now();
+  if(changed){save();renderAll()}
+}
+let pollT=null;
+function startPolling(){
+  if(pollT)return;
+  // pick up edits made on another device while this one is open
+  pollT=setInterval(()=>{if(cloud.db&&!document.hidden&&!drag&&!cloud.q.size)pullCloud().catch(()=>{})},45000);
+  document.addEventListener('visibilitychange',()=>{if(cloud.db&&!document.hidden&&!cloud.q.size)pullCloud().catch(()=>{})});
+}
+async function connect(db,via){
+  cloud.db=db;cloud.via=via;syncUI('busy','Connecting…');
+  try{await pullCloud();syncUI('on','Synced');await flush()}catch(e){console.warn('cloud',e);syncUI('err',e&&e.code==='not_found'?'Board gone':'Cloud unavailable');if(e&&e.code==='not_found'){cloud.db=null;rememberToken(null)}}
+  startPolling();
+}
+async function initCloud(){
+  if(window.claude&&typeof window.claude.use==='function'){
+    try{downloads=await window.claude.use('downloads')}catch(e){}
+    let db=null;try{db=await window.claude.use('db')}catch(e){}
+    if(db){await connect(db,'claude');return}
+  }
+  if(PUBLIC){syncUI('','Saved in this browser');return}
+  const fromHash=tokenFromText(location.hash);
+  let token=fromHash;if(!token){try{token=localStorage.getItem('gridboard.token')}catch(e){}}
+  if(token&&TOKEN_RE.test(token)){rememberToken(token);await connect(boardBackend(token),'board');return}
+  syncUI('','On this device');
+}
+async function turnOnSync(){
+  const btn=$('#syncOn');btn.disabled=true;btn.textContent='Setting up…';
+  try{const token=await boardBackend(null).create();rememberToken(token);await connect(boardBackend(token),'board');
+    // everything already here goes up
+    S.layouts.forEach(l=>cloudPushLayout(l.id));cloudPushSettings();
+    for(const id of Object.keys(S.images)){const b=await iget('blobs',id);if(b)cloudPushImage(id,b)}
+    await flush();renderSyncPanel();toast('Sync is on')}
+  catch(e){console.warn(e);toast('Could not reach the cloud. Try again in a moment.')}
+  btn.disabled=false;btn.textContent='Turn on sync';
+}
+async function joinBoard(text){
+  const token=tokenFromText(text);if(!token){toast('That does not look like a board link');return}
+  rememberToken(token);await connect(boardBackend(token),'board');
+  if(cloud.db){S.layouts.forEach(l=>cloudPushLayout(l.id));for(const id of Object.keys(S.images)){const b=await iget('blobs',id);if(b)cloudPushImage(id,b)}await flush();renderSyncPanel();toast('Joined')}
+}
+function stopSync(){cloud.db=null;cloud.via=null;rememberToken(null);cloud.q.clear();syncUI('','On this device');renderSyncPanel()}
+let qrLib=null;
+function drawQR(){
+  const box=$('#syncQR');box.innerHTML='';
+  const go=()=>{try{new QRCode(box,{text:boardLink(),width:168,height:168,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M})}catch(e){box.textContent=''}};
+  if(window.QRCode){go();return}
+  if(!qrLib){qrLib=document.createElement('script');qrLib.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';qrLib.onload=go;document.head.appendChild(qrLib)}else qrLib.addEventListener('load',go);
+}
+function renderSyncPanel(){
+  const on=cloud.via==='board';
+  $('#syncOff').hidden=on||cloud.via==='claude';$('#syncOnBox').hidden=!on;
+  if(cloud.via==='claude'){$('#syncOff').hidden=false;$('#syncOff').innerHTML='<div class="sub">This copy syncs through your Claude account: every device where you open this page signed in sees the same board.</div>'}
+  if(on){$('#syncLink').value=boardLink();$('#syncShare').hidden=!navigator.share;$('#syncWhen').textContent=cloud.lastPull?new Date(cloud.lastPull).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'not yet';drawQR()}
+}
+$('#sync').addEventListener('click',()=>{if(PUBLIC){$('#aboutModal').classList.add('open');return}renderSyncPanel();$('#syncModal').classList.add('open')});
+$('#aboutBtn').hidden=!PUBLIC;$('#aboutBtn').addEventListener('click',()=>$('#aboutModal').classList.add('open'));
+$('#aboutClose').addEventListener('click',()=>$('#aboutModal').classList.remove('open'));
+$('#syncClose').addEventListener('click',()=>$('#syncModal').classList.remove('open'));
+$('#syncOn').addEventListener('click',turnOnSync);
+$('#syncJoin').addEventListener('click',()=>joinBoard($('#syncPaste').value));
+$('#syncPaste').addEventListener('keydown',e=>{if(e.key==='Enter')joinBoard(e.target.value)});
+$('#syncCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(boardLink());toast('Link copied')}catch(e){$('#syncLink').select();toast('Select the link and copy it')}});
+$('#syncShare').addEventListener('click',()=>{navigator.share({title:'Gridboard',url:boardLink()}).catch(()=>{})});
+$('#syncStop').addEventListener('click',()=>{if(confirm('Stop syncing on this device? The board stays in the cloud and on your other devices.'))stopSync()});
+
+/* ---------- boot ---------- */
+async function boot(){
+  try{
+    const st=await iget('meta','state');
+    if(st){S={...S,...st,settings:{...DEFAULTS,...(st.settings||{})}};S.deleted=S.deleted||{}}
+    const ids=Object.keys(S.images);
+    await Promise.all(ids.map(async id=>{const b=await iget('blobs',id),t=await iget('thumbs',id);if(b)urls.set(id,URL.createObjectURL(b));if(t)turls.set(id,URL.createObjectURL(t));if(!b&&!t)delete S.images[id]}));
+    S.layouts.forEach(l=>l.tiles=l.tiles.filter(t=>S.images[t.img]&&!t._temp));
+  }catch(e){storageWarn(e)}
+  if(!S.layouts.length)newLayout('First layout');
+  if(!S.layouts.some(l=>l.id===S.current))S.current=S.layouts[0].id;
+  $('#undoBtn').disabled=true;
+  renderAll();
+  initCloud();
+}
+boot();
+window.__gb={get S(){return S},addFiles,renderAll,urls};
+})();
+</script>
+</body>
+</html>

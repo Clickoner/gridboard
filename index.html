@@ -56,7 +56,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);fon
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-img{max-width:100%;display:block}
+img{max-width:100%;display:block;-webkit-user-drag:none;user-drag:none}
+.tile,.lib .it,.tile *,.lib .it *{-webkit-user-drag:none}
 .app{display:grid;grid-template-rows:48px 1fr;height:100dvh}
 
 /* ---- Top bar ---- */
@@ -161,6 +162,7 @@ hr.sep{border:0;border-top:1px solid var(--line-soft);margin:12px 0}
 .grid{position:relative;width:100%;background:var(--ig-gap);touch-action:pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 .tile{position:absolute;left:0;top:0;overflow:hidden;background:var(--raised);transition:transform .2s cubic-bezier(.2,.7,.2,1);will-change:transform;cursor:grab}
 .tile img{width:100%;height:100%;object-fit:cover;pointer-events:none;transform-origin:50% 50%}
+.tile.arm{z-index:15;outline:3px solid var(--accent);outline-offset:-3px;box-shadow:0 10px 24px rgba(0,0,0,.5)}
 .tile.dragging{transition:none;z-index:20;cursor:grabbing;box-shadow:0 14px 30px rgba(0,0,0,.5);transform-origin:center}
 .tile.dragging img{filter:brightness(1.02)}
 .tile.temp{outline:2px dashed var(--accent);outline-offset:-2px}
@@ -703,11 +705,15 @@ function commitOrder(vis){
 function startPointer(e,kind,id,el){
   if(e.button&&e.button!==0)return;
   drag={kind,id,el,sx:e.clientX,sy:e.clientY,active:false,ptr:e.pointerId,touch:e.pointerType==='touch'};
-  if(drag.touch){drag.timer=setTimeout(()=>{if(drag&&!drag.active)activate(e.clientX,e.clientY)},260)}
+  if(drag.touch){
+    drag.armT=setTimeout(()=>{if(drag&&!drag.active)el.classList.add('arm')},120);
+    drag.timer=setTimeout(()=>{if(drag&&!drag.active)activate(drag.lx??e.clientX,drag.ly??e.clientY)},220);
+  }
 }
 function activate(cx,cy){
-  const d=drag;d.active=true;
+  const d=drag;d.active=true;d.el.classList.remove('arm');
   try{d.el.setPointerCapture(d.ptr)}catch(e){}
+  lastP={x:cx,y:cy};if(!autoT)autoT=setInterval(autoScroll,16);
   if(navigator.vibrate)try{navigator.vibrate(8)}catch(e){}
   const m=metrics();
   if(d.kind==='tile'){
@@ -723,7 +729,16 @@ function activate(cx,cy){
   }
   moveDrag(cx,cy);
 }
+let autoT=null,lastP=null;
+function autoScroll(){
+  if(!drag||!drag.active||!lastP){clearInterval(autoT);autoT=null;return}
+  const r=stage.getBoundingClientRect(),edge=72,y=lastP.y;let dy=0;
+  if(y<r.top+edge)dy=-Math.ceil((edge-(y-r.top))/edge*16);
+  else if(y>r.bottom-edge)dy=Math.ceil((edge-(r.bottom-y))/edge*16);
+  if(dy){const before=stage.scrollTop;stage.scrollTop+=dy;if(stage.scrollTop!==before)moveDrag(lastP.x,lastP.y)}
+}
 function moveDrag(cx,cy){
+  lastP={x:cx,y:cy};
   const d=drag,m=metrics(),gr=grid.getBoundingClientRect();
   if(d.kind==='tile'){
     d.el.style.transform='translate('+(cx-d.ox-gr.left)+'px,'+(cy-d.oy-gr.top)+'px)';
@@ -748,7 +763,7 @@ function moveDrag(cx,cy){
   }
 }
 function endDrag(cancel){
-  const d=drag;if(!d)return;drag=null;clearTimeout(d.timer);
+  const d=drag;if(!d)return;drag=null;clearTimeout(d.timer);clearTimeout(d.armT);d.el.classList.remove('arm');if(autoT){clearInterval(autoT);autoT=null}
   try{d.el.releasePointerCapture(d.ptr)}catch(e){}
   if(!d.active)return;
   const L=cur();
@@ -779,7 +794,7 @@ document.addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.ptr)return;
   if(!drag.active){
     const dist=Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy);
-    if(drag.touch){if(dist>10){clearTimeout(drag.timer);drag=null}return}
+    if(drag.touch){drag.lx=e.clientX;drag.ly=e.clientY;if(dist>14){clearTimeout(drag.timer);clearTimeout(drag.armT);drag.el.classList.remove('arm');drag=null}return}
     if(dist>5)activate(e.clientX,e.clientY);else return;
   }
   e.preventDefault();moveDrag(e.clientX,e.clientY);
@@ -788,7 +803,7 @@ document.addEventListener('pointerup',e=>{
   if(!drag||e.pointerId!==drag.ptr)return;
   const d=drag;
   if(!d.active){ // a click
-    drag=null;clearTimeout(d.timer);
+    drag=null;clearTimeout(d.timer);clearTimeout(d.armT);d.el.classList.remove('arm');
     if(d.kind==='tile'){const t=cur().tiles.find(t=>tid(t)===d.id);if(t&&!t.img){select(d.id);pickForSlot(d.id);return}select(d.id===selected?null:d.id)}
     else placeAtTop(d.id);
     return;
@@ -798,6 +813,7 @@ document.addEventListener('pointerup',e=>{
 document.addEventListener('pointercancel',e=>{if(drag&&e.pointerId===drag.ptr)endDrag(true)});
 document.addEventListener('touchmove',e=>{if(drag&&drag.active)e.preventDefault()},{passive:false});
 document.addEventListener('contextmenu',e=>{if(drag||e.target.closest('.tile,.lib .it'))e.preventDefault()});
+document.addEventListener('dragstart',e=>{if(e.target.closest&&e.target.closest('.tile,.lib .it'))e.preventDefault()});
 
 function placeAtTop(id){const L=cur();if(L.tiles.some(t=>t.img===id))return;snap();L.tiles.unshift(newTile(id));touch(L);save();select(id,false);renderAll();toast('Placed at the top')}
 function select(id,render=true){selected=id;if(render){renderGrid();renderInsp()}else{tileEls.forEach((el,k)=>el.classList.toggle('sel',k===id))}renderTilebar()}

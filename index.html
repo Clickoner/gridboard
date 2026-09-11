@@ -234,12 +234,15 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .export-preview img{width:100%;height:auto;max-height:50vh;object-fit:contain}
 
 /* ---- Toast ---- */
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--raised);border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:120;pointer-events:none;box-shadow:var(--shadow)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--raised);border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:120;pointer-events:none;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;white-space:nowrap}
+.toast.act{pointer-events:auto}
+.toast button{border:0;background:transparent;color:var(--accent);font-weight:600;padding:0}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ---- Tile action bar (phones: the inspector is on another tab) ---- */
-.tilebar{display:none;position:fixed;left:0;right:0;bottom:54px;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:8px 10px;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.tilebar button{flex:none;border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.tilebar{display:none;position:fixed;left:0;right:0;bottom:54px;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:8px 10px;gap:6px;grid-template-columns:repeat(4,1fr)}
+.tilebar.two{grid-template-columns:repeat(2,1fr)}
+.tilebar button{border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:8px 4px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:0;white-space:nowrap}
 .tilebar button.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
 .tilebar button.danger{color:var(--danger)}
 .tilebar button svg{width:14px;height:14px;fill:currentColor}
@@ -269,7 +272,9 @@ input[type=range]{accent-color:var(--accent);width:100%}
   .sync{padding:6px}
   .btn .long{display:none}
   .mob{display:block}
-  .tilebar.show{display:flex}
+  .tilebar.show{display:grid}
+  .mob-hide{display:none!important}
+  .toast{bottom:auto;top:60px}
   .body[data-tab="grid"] .stage{padding-bottom:120px}
 }
 @media (prefers-reduced-motion: reduce){.tile{transition:none}.toast{transition:none}}
@@ -283,7 +288,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
     <div class="brand"><b>Gridboard</b><span>Instagram planner</span></div>
     <div class="grow"></div>
     <div class="seg desk" id="stageSeg"><button data-v="phone" class="on">Phone</button><button data-v="board">Board</button></div>
-    <div class="seg" id="ratioSeg"><button data-v="4:5" class="on">4:5</button><button data-v="1:1">1:1</button></div>
+    <div class="seg desk" id="ratioSeg"><button data-v="4:5" class="on">4:5</button><button data-v="1:1">1:1</button></div>
     <button class="btn ghost sm desk" id="undoBtn" title="Undo (⌘Z)">Undo</button>
     <button class="btn sm" id="exportBtn"><span>Save<span class="long"> grid image</span></span></button>
     <button class="btn ghost sm desk" id="keysBtn" title="Keyboard shortcuts (?)">?</button>
@@ -353,11 +358,14 @@ input[type=range]{accent-color:var(--accent);width:100%}
         </div>
         <h3 style="margin-bottom:6px">Layouts</h3>
         <div class="layouts" id="layouts"></div>
+        <div class="mob-hide">
         <hr class="sep">
         <h3 style="margin-bottom:8px">Selected tile</h3>
         <div id="insp"><div class="insp-empty">Click a tile to mark it posted, set it as a carousel or reel, adjust the crop, or add a note.</div></div>
+        </div>
         <hr class="sep">
         <h3 style="margin-bottom:8px">View</h3>
+        <div class="mob" style="margin-bottom:10px"><div class="seg" id="ratioSeg2"><button data-v="4:5" class="on">4:5 tiles</button><button data-v="1:1">1:1 tiles</button></div></div>
         <label class="chk"><input type="checkbox" id="optGap" checked> Show gaps between tiles</label>
         <label class="chk" style="margin-top:6px"><input type="checkbox" id="optOrder"> Number the posting order</label>
         <label class="chk" style="margin-top:6px"><input type="checkbox" id="optNotes"> Show notes on tiles</label>
@@ -373,7 +381,6 @@ input[type=range]{accent-color:var(--accent);width:100%}
     <button data-tab="library"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>Library</button>
     <button data-tab="grid" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Grid</button>
     <button data-tab="layouts"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Layouts</button>
-    <button data-act="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
   </nav>
   <div class="tilebar" id="tilebar"></div>
 </div>
@@ -654,7 +661,7 @@ function renderInsp(){
     '<div class="types">'+['post','carousel','reel'].map(k=>'<button data-t="'+k+'" class="'+(t.type===k?'on':'')+'">'+(k==='post'?'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>':ICON[k==='carousel'?'car':'reel'])+(k[0].toUpperCase()+k.slice(1))+'</button>').join('')+'</div>'+
     '<label class="chk" style="margin-bottom:10px"><input type="checkbox" id="inspPosted"'+(t.posted?' checked':'')+'> Already posted</label>'+
     '<div class="field"><label>Note</label><input id="inspNote" placeholder="Caption idea, date, hook…"></div>'+
-    '<div class="row wrap"><button class="btn sm" id="inspCrop">Crop</button><button class="btn sm ghost" id="inspTop">To top</button><button class="btn sm ghost" id="inspBottom">To bottom</button><span style="flex:1"></span><button class="btn sm ghost danger" id="inspRemove">Remove</button></div>';
+    '<div class="row wrap"><button class="btn sm" id="inspCrop">Crop</button><span style="flex:1"></span><button class="btn sm ghost danger" id="inspRemove">Remove</button></div>';
   const ii=$('#inspImg');ii.src=urls.get(t.img)||'';applyCrop(ii,t);
   box.querySelector('.insp-img').style.aspectRatio=S.settings.ratio==='1:1'?'1':'4/5';
   box.querySelector('.insp-name').textContent=im.name;
@@ -665,7 +672,7 @@ function renderProfile(){
   $('#igUser').textContent=s.username;$('#igName').textContent=s.name;$('#igBio').textContent=s.bio;
   $('#stFollowers').textContent=s.followers;$('#stFollowing').textContent=s.following;
   const a=$('#ava');a.innerHTML=s.avatar?'<img alt="" src="'+s.avatar+'">':'Profile photo';
-  $$('#ratioSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.ratio));
+  $$('#ratioSeg button, #ratioSeg2 button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.ratio));
   $$('#stageSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.stage));
   stage.classList.toggle('board',s.stage==='board');
   $('#optGap').checked=s.gap;$('#optOrder').checked=s.order;$('#optNotes').checked=s.notes;$('#optHide').checked=s.hidePosted;
@@ -760,6 +767,7 @@ function endDrag(cancel){
   }
 }
 grid.addEventListener('click',e=>{const sl=e.target.closest('.slot');if(sl)pickForSlot(+sl.dataset.i)});
+document.addEventListener('click',e=>{if(selected&&!e.target.closest('.tile,.tilebar,.rail,.modal,.top,.tabs,.toast'))select(null)});
 grid.addEventListener('pointerdown',e=>{const t=e.target.closest('.tile');if(!t||t.classList.contains('temp'))return;startPointer(e,'tile',t.dataset.id,t)});
 $('#lib').addEventListener('pointerdown',e=>{
   if(e.target.classList.contains('del'))return;
@@ -797,10 +805,11 @@ const TYPE_NEXT={post:'carousel',carousel:'reel',reel:'post'}, TYPE_LABEL={post:
 function renderTilebar(){
   const bar=$('#tilebar'), t=selTile();
   if(!t){bar.classList.remove('show');return}
-  if(!t.img){bar.innerHTML='<button data-a="pick">Choose picture</button><button data-a="remove" class="danger">Remove</button><button data-a="done">Done</button>';bar.classList.add('show');return}
+  bar.classList.toggle('two',!t.img);
+  if(!t.img){bar.innerHTML='<button data-a="pick">Choose picture</button><button data-a="remove" class="danger">Remove</button>';bar.classList.add('show');return}
   bar.innerHTML='<button data-a="posted" class="'+(t.posted?'on':'')+'">Posted</button>'+
     '<button data-a="type">'+(t.type==='post'?'':ICON[t.type==='carousel'?'car':'reel'])+TYPE_LABEL[t.type]+'</button>'+
-    '<button data-a="crop">Crop</button><button data-a="top">To top</button><button data-a="bottom">To bottom</button><button data-a="remove" class="danger">Remove</button><button data-a="done">Done</button>';
+    '<button data-a="crop">Crop</button><button data-a="remove" class="danger">Remove</button>';
   bar.classList.add('show');
 }
 $('#tilebar').addEventListener('click',e=>{
@@ -810,10 +819,7 @@ $('#tilebar').addEventListener('click',e=>{
     case 'posted':togglePosted();break;
     case 'type':setType(TYPE_NEXT[t.type]);break;
     case 'crop':openCrop();break;
-    case 'top':moveSel(0,'top');break;
-    case 'bottom':moveSel(0,'bottom');break;
     case 'remove':removeSel();break;
-    case 'done':select(null);break;
   }
   renderTilebar();
 });
@@ -825,7 +831,7 @@ function moveSel(delta,abs){
   let j=abs==='top'?0:abs==='bottom'?vis.length-1:clamp(i+delta,0,vis.length-1);if(j===i)return;
   snap();vis.splice(j,0,vis.splice(i,1)[0]);commitOrder(vis);touch(L);save();renderGrid();renderLayouts();
 }
-function removeSel(){const L=cur(),t=selTile();if(!t)return;snap();L.tiles=L.tiles.filter(x=>x!==t);trimBlanks(L);touch(L);save();selected=null;renderAll();renderTilebar();if(t.img)toast('Taken off the grid. It is still in the library.')}
+function removeSel(){const L=cur(),t=selTile();if(!t)return;snap();L.tiles=L.tiles.filter(x=>x!==t);trimBlanks(L);touch(L);save();selected=null;renderAll();renderTilebar();if(t.img)toast('Taken off the grid',4000,{label:'Undo',run:undo})}
 function setType(k){const t=selTile();if(!t)return;snap();t.type=k;touch(cur());save();renderGrid();renderInsp();renderTilebar()}
 function togglePosted(){const t=selTile();if(!t)return;snap();t.posted=!t.posted;touch(cur());save();renderGrid();renderInsp();renderTilebar()}
 
@@ -834,8 +840,6 @@ $('#insp').addEventListener('click',e=>{
   if(b.dataset.t)setType(b.dataset.t);
   else if(b.id==='inspPick')pickForSlot(selected);
   else if(b.id==='inspCrop')openCrop();
-  else if(b.id==='inspTop')moveSel(0,'top');
-  else if(b.id==='inspBottom')moveSel(0,'bottom');
   else if(b.id==='inspRemove')removeSel();
 });
 $('#insp').addEventListener('change',e=>{if(e.target.id==='inspPosted')togglePosted()});
@@ -902,7 +906,9 @@ $('#avaIn').addEventListener('change',async e=>{
 });
 
 /* ---------- controls ---------- */
-$('#ratioSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.settings.ratio=b.dataset.v;touchSettings();save();renderProfile();renderGrid();renderInsp()});
+function setRatio(v){S.settings.ratio=v;touchSettings();save();renderProfile();renderGrid();renderInsp()}
+$('#ratioSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setRatio(b.dataset.v)});
+$('#ratioSeg2').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setRatio(b.dataset.v)});
 $('#stageSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.settings.stage=b.dataset.v;save();renderProfile();renderGrid()});
 $('#optGap').addEventListener('change',e=>{S.settings.gap=e.target.checked;touchSettings();save();renderGrid()});
 $('#optOrder').addEventListener('change',e=>{S.settings.order=e.target.checked;save();renderGrid()});
@@ -912,7 +918,7 @@ $('#undoBtn').addEventListener('click',undo);
 $('#keysBtn').addEventListener('click',()=>$('#keysModal').classList.add('open'));
 $('#keysClose').addEventListener('click',()=>$('#keysModal').classList.remove('open'));
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.act==='undo'){undo();toast(hist.length?'Undone':'Nothing to undo');return}$('#body').dataset.tab=b.dataset.tab;$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));if(b.dataset.tab==='grid')requestAnimationFrame(()=>renderGrid())});
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#body').dataset.tab=b.dataset.tab;$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));if(b.dataset.tab==='grid')requestAnimationFrame(()=>renderGrid())});
 window.addEventListener('resize',()=>renderGrid());
 new ResizeObserver(()=>renderGrid()).observe(grid);
 
@@ -1010,7 +1016,7 @@ $('#orderTxtBtn').addEventListener('click',async()=>{
 });
 
 /* ---------- toast ---------- */
-let toastT;function toast(m,ms){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms||2200)}
+let toastT;function toast(m,ms,action){const t=$('#toast');t.textContent=m;t.classList.toggle('act',!!action);if(action){const b=document.createElement('button');b.textContent=action.label;b.onclick=()=>{t.classList.remove('show');action.run()};t.appendChild(b)}t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms||2200)}
 
 /* ---------- cloud sync: Claude's store inside the artifact, otherwise a board link on Supabase ---------- */
 const SB_FN='https://snsypfnlfgyjxkzllgan.supabase.co/functions/v1/gridboard';

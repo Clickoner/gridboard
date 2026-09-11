@@ -124,7 +124,7 @@ hr.sep{border:0;border-top:1px solid var(--line-soft);margin:12px 0}
 /* ---- Stage ---- */
 .stage{position:relative;overflow:auto;min-height:0;display:flex;justify-content:center;align-items:flex-start;padding:22px 20px 40px;background:
   radial-gradient(1200px 600px at 50% -10%, rgba(227,163,74,.06), transparent 60%);}
-.stage.over::after{content:"Drop to add";position:absolute;inset:12px;border:2px dashed var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:16px;pointer-events:none;background:var(--accent-soft)}
+.stage.over:not(:has(#grid .drop))::after{content:"Drop to add";position:absolute;inset:12px;border:2px dashed var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:16px;pointer-events:none;background:var(--accent-soft)}
 .phone{width:390px;flex:none;border-radius:44px;background:#0a0a0a;padding:12px;box-shadow:var(--shadow),inset 0 0 0 2px #2a2a2a}
 .screen{background:var(--ig-bg);color:var(--ig-text);border-radius:34px;overflow:hidden;min-height:760px}
 .stage.board .phone{width:min(100%,760px);border-radius:12px;padding:0;background:transparent;box-shadow:none}
@@ -164,6 +164,15 @@ hr.sep{border:0;border-top:1px solid var(--line-soft);margin:12px 0}
 .tile.dragging{transition:none;z-index:20;cursor:grabbing;box-shadow:0 14px 30px rgba(0,0,0,.5);transform-origin:center}
 .tile.dragging img{filter:brightness(1.02)}
 .tile.temp{outline:2px dashed var(--accent);outline-offset:-2px}
+.tile.blank{background:transparent;outline:1px dashed var(--line);outline-offset:-1px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer}
+.tile.blank .plus{font-size:26px;line-height:1;font-weight:300}
+.tile.blank:hover{color:var(--accent);outline-color:var(--accent)}
+.stage.board .tile.blank{background:var(--raised)}
+.slot{cursor:pointer}
+.slot:hover{opacity:.8;outline:1px dashed var(--muted);outline-offset:-1px}
+.tile.drop,.slot.drop{outline:3px solid var(--accent);outline-offset:-3px;opacity:1;z-index:6}
+.slot.drop{background:var(--accent-soft)}
+.tile.drop::before{content:"";position:absolute;inset:0;background:var(--accent-soft);pointer-events:none}
 .tile.sel{outline:3px solid var(--accent);outline-offset:-3px;z-index:5}
 .tile.posted img{opacity:.9}
 .tile .mk{position:absolute;right:6px;top:6px;width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));display:none}
@@ -276,7 +285,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
     <div class="seg desk" id="stageSeg"><button data-v="phone" class="on">Phone</button><button data-v="board">Board</button></div>
     <div class="seg" id="ratioSeg"><button data-v="4:5" class="on">4:5</button><button data-v="1:1">1:1</button></div>
     <button class="btn ghost sm desk" id="undoBtn" title="Undo (⌘Z)">Undo</button>
-    <button class="btn sm" id="exportBtn">Save<span class="long">&nbsp;grid image</span></button>
+    <button class="btn sm" id="exportBtn"><span>Save<span class="long"> grid image</span></span></button>
     <button class="btn ghost sm desk" id="keysBtn" title="Keyboard shortcuts (?)">?</button>
     <button class="btn ghost sm" id="aboutBtn" hidden>About</button>
     <button class="sync" id="sync" title="Where this board is stored"><i></i><span>On this device</span></button>
@@ -288,6 +297,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
       <div class="rail-head"><h3>Library</h3><span class="count" id="libCount"></span></div>
       <div class="drop" id="dropZone"><b>Add images</b>Drop files here, click to browse, or paste. Order in the grid is yours to move.</div>
       <input type="file" id="fileIn" accept="image/*" multiple hidden>
+      <input type="file" id="slotIn" accept="image/*" multiple hidden>
       <div class="rail-body">
         <div class="row" style="margin-bottom:10px">
           <button class="btn sm" id="addAllBtn">Place all unplaced</button>
@@ -527,16 +537,25 @@ async function addFiles(files,at=0,toGrid=true){
     await iput('blobs',id,disp); await iput('thumbs',id,th);
     urls.set(id,URL.createObjectURL(disp)); turls.set(id,URL.createObjectURL(th));
     S.images[id]={id,name:f.name.replace(/\.[^.]+$/,''),w,h,added:Date.now()};
-    if(toGrid){L.tiles.splice(at+added,0,newTile(id))}
+    if(toGrid){placeAt(L.tiles,newTile(id),at+added)}
     added++; cloudPushImage(id,disp);
   }
-  if(toGrid)touch(L); save(); renderAll();
+  if(toGrid){trimBlanks(L);touch(L)} save(); renderAll();
   toast(added+' added'+(skipped?', '+skipped+' could not be read (HEIC?)':''));
   let hinted=false;try{hinted=!!localStorage.getItem('gridboard.hint')}catch(e){}
   if(toGrid&&added&&!hinted){try{localStorage.setItem('gridboard.hint','1')}catch(e){}setTimeout(()=>toast(isTouch()?'Hold a tile to drag it. Tap one for options.':'Drag tiles to reorder. Click one for options.',4000),2400)}
 }
 const isTouch=()=>matchMedia('(pointer:coarse)').matches;
 const newTile=img=>({img,type:'post',posted:false,crop:{x:.5,y:.5,z:1},note:''});
+const newBlank=()=>({...newTile(null),id:'b'+uid()});
+const tid=t=>t.img||t.id;
+function trimBlanks(L){while(L.tiles.length&&!L.tiles[L.tiles.length-1].img)L.tiles.pop()}
+/** Put a tile at slot `at`: fill a blank there, insert before a picture, or pad with blanks to reach it. */
+function placeAt(tiles,tile,at){
+  const i=tiles.indexOf(tile);if(i>=0)tiles.splice(i,1);
+  while(tiles.length<at)tiles.push(newBlank());
+  if(at<tiles.length&&!tiles[at].img)tiles[at]=tile;else tiles.splice(at,0,tile);
+}
 
 /* ---------- layouts ---------- */
 function newLayout(name,tiles){const l={id:uid(),name:name||'Layout '+(S.layouts.length+1),tiles:tiles||[],created:Date.now(),updated:Date.now()};S.layouts.push(l);S.current=l.id;return l}
@@ -560,46 +579,49 @@ function metrics(){
 function slotXY(i,m){return {x:(i%3)*(m.w+m.g),y:Math.floor(i/3)*(m.h+m.g)}}
 function applyCrop(img,t){const c=t.crop||{x:.5,y:.5,z:1};img.style.objectPosition=(c.x*100)+'% '+(c.y*100)+'%';img.style.transformOrigin=(c.x*100)+'% '+(c.y*100)+'%';img.style.transform=c.z!==1?'scale('+c.z+')':''}
 function tileEl(t){
-  let el=tileEls.get(t.img);
+  const id=tid(t);
+  let el=tileEls.get(id);
   if(!el){
-    el=document.createElement('div');el.className='tile';el.dataset.id=t.img;
-    el.innerHTML='<img alt=""><span class="note"></span><span class="mk car">'+ICON.car+'</span><span class="mk reel">'+ICON.reel+'</span><span class="ord"></span><span class="pst">Posted</span>';
-    el.querySelector('img').src=urls.get(t.img)||turls.get(t.img)||'';
-    tileEls.set(t.img,el);el.classList.add('fresh');requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('fresh')));
+    el=document.createElement('div');el.className='tile'+(t.img?'':' blank');el.dataset.id=id;
+    if(t.img){
+      el.innerHTML='<img alt=""><span class="note"></span><span class="mk car">'+ICON.car+'</span><span class="mk reel">'+ICON.reel+'</span><span class="ord"></span><span class="pst">Posted</span>';
+      el.querySelector('img').src=urls.get(t.img)||turls.get(t.img)||'';
+    }else el.innerHTML='<span class="plus" title="Choose a picture for this square">+</span><span class="ord"></span>';
+    tileEls.set(id,el);el.classList.add('fresh');requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('fresh')));
   }
   el.classList.toggle('carousel',t.type==='carousel');el.classList.toggle('reel',t.type==='reel');
-  el.classList.toggle('posted',!!t.posted);el.classList.toggle('temp',!!t._temp);el.classList.toggle('sel',selected===t.img);
-  el.querySelector('.note').textContent=t.note||'';
-  applyCrop(el.querySelector('img'),t);
+  el.classList.toggle('posted',!!t.posted);el.classList.toggle('temp',!!t._temp);el.classList.toggle('sel',selected===id);
+  if(t.img){el.querySelector('.note').textContent=t.note||'';applyCrop(el.querySelector('img'),t)}
   return el;
 }
+function slotCount(){const n=visible().length;return Math.max(3,Math.ceil(n/3)+(n%3===0?1:0))*3}
 function renderGrid(){
   const L=cur(), vis=visible(), m=metrics();
   grid.classList.toggle('order',!!S.settings.order);grid.classList.toggle('notes',!!S.settings.notes);
-  const rows=Math.max(3,Math.ceil(vis.length/3)+(vis.length%3===0?1:0));
+  const rows=slotCount()/3;
   grid.style.height=(rows*(m.h+m.g)-m.g)+'px';
-  const keep=new Set(vis.map(t=>t.img));
+  const keep=new Set(vis.map(tid));
   for(const [id,el] of tileEls){if(!keep.has(id)){el.remove();tileEls.delete(id)}}
   // empty slots as a faint frame
 
   grid.querySelectorAll('.slot').forEach(s=>s.remove());
-  for(let i=vis.length;i<rows*3;i++){const s=document.createElement('div');s.className='slot';const p=slotXY(i,m);s.style.cssText='width:'+m.w+'px;height:'+m.h+'px;transform:translate('+p.x+'px,'+p.y+'px)';grid.appendChild(s)}
+  for(let i=vis.length;i<rows*3;i++){const s=document.createElement('div');s.className='slot';s.dataset.i=i;s.title='Click to choose a picture for this square';const p=slotXY(i,m);s.style.cssText='width:'+m.w+'px;height:'+m.h+'px;transform:translate('+p.x+'px,'+p.y+'px)';grid.appendChild(s)}
   let order=0;
   const unposted=vis.filter(t=>!t.posted).length;
   vis.forEach((t,i)=>{
     const el=tileEl(t); if(el.parentNode!==grid)grid.appendChild(el);
     if(!t.posted){order++;el.querySelector('.ord').textContent=unposted-order+1}
-    if(drag&&drag.kind==='tile'&&drag.active&&drag.id===t.img)return;
+    if(drag&&drag.kind==='tile'&&drag.active&&drag.id===tid(t))return;
     el.style.width=m.w+'px';el.style.height=m.h+'px';
     const p=slotXY(i,m);el.style.transform='translate('+p.x+'px,'+p.y+'px)';
   });
   let em=grid.querySelector('.grid-empty');
   if(!vis.length){if(!em){em=document.createElement('div');em.className='grid-empty';grid.appendChild(em)}em.innerHTML='<div><b>Empty grid</b>'+(Object.keys(S.images).length?'Drag pictures in from the library, or click one to place it.':'Drop pictures anywhere on this page to start.')+'</div>'}
   else if(em)em.remove();
-  $('#stPosts').textContent=L.tiles.length;
+  $('#stPosts').textContent=L.tiles.filter(t=>t.img).length;
 }
 function renderLib(){
-  const L=cur(), placed=new Set(L.tiles.map(t=>t.img));
+  const L=cur(), placed=new Set(L.tiles.filter(t=>t.img).map(t=>t.img));
   const lib=$('#lib'); lib.innerHTML='';
   const imgs=Object.values(S.images).sort((a,b)=>b.added-a.added);
   imgs.forEach(im=>{
@@ -615,8 +637,8 @@ function renderLayouts(){
   const box=$('#layouts');box.innerHTML='';
   S.layouts.slice().sort((a,b)=>b.updated-a.updated).forEach(l=>{
     const d=document.createElement('div');d.className='lay'+(l.id===S.current?' on':'');d.dataset.id=l.id;
-    const strip=l.tiles.slice(0,6).map(t=>'<i><img alt="" src="'+(turls.get(t.img)||'')+'"></i>').join('');
-    d.innerHTML='<div class="strip">'+strip+'</div><div class="nm"></div><span class="ct">'+l.tiles.length+'</span>';
+    const strip=l.tiles.filter(t=>t.img).slice(0,6).map(t=>'<i><img alt="" src="'+(turls.get(t.img)||'')+'"></i>').join('');
+    d.innerHTML='<div class="strip">'+strip+'</div><div class="nm"></div><span class="ct">'+l.tiles.filter(t=>t.img).length+'</span>';
     d.querySelector('.nm').textContent=l.name;
     box.appendChild(d);
   });
@@ -624,8 +646,9 @@ function renderLayouts(){
   $('#delLayBtn').disabled=S.layouts.length<2;
 }
 function renderInsp(){
-  const box=$('#insp'), L=cur(), t=L.tiles.find(t=>t.img===selected);
+  const box=$('#insp'), L=cur(), t=L.tiles.find(t=>tid(t)===selected);
   if(!t){box.innerHTML='<div class="insp-empty">Click a tile to mark it posted, set it as a carousel or reel, adjust the crop, or add a note.</div>';return}
+  if(!t.img){box.innerHTML='<div class="insp-empty" style="margin-bottom:10px">An empty square. Whatever you put here is post '+(($('#grid .tile.sel .ord')||{}).textContent||'')+' in the order.</div><div class="row wrap"><button class="btn sm" id="inspPick">Choose picture</button><span style="flex:1"></span><button class="btn sm ghost danger" id="inspRemove">Remove</button></div>';return}
   const im=S.images[t.img]||{name:''};
   box.innerHTML='<div class="insp-img"><img alt="" id="inspImg"></div><div class="insp-name"></div>'+
     '<div class="types">'+['post','carousel','reel'].map(k=>'<button data-t="'+k+'" class="'+(t.type===k?'on':'')+'">'+(k==='post'?'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>':ICON[k==='carousel'?'car':'reel'])+(k[0].toUpperCase()+k.slice(1))+'</button>').join('')+'</div>'+
@@ -651,6 +674,13 @@ function renderAll(){renderProfile();renderGrid();renderLib();renderLayouts();re
 
 /* ---------- drag ---------- */
 let drag=null, ghost=null;
+function highlightSlot(idx){
+  grid.querySelectorAll('.drop').forEach(e=>e.classList.remove('drop'));
+  if(idx<0)return;
+  const vis=visible();
+  const el=idx<vis.length?tileEls.get(tid(vis[idx])):grid.querySelector('.slot[data-i="'+idx+'"]');
+  if(el)el.classList.add('drop');
+}
 function gridIndexAt(cx,cy,n){
   const r=grid.getBoundingClientRect(), m=metrics();
   const px=cx-r.left, py=cy-r.top;
@@ -661,6 +691,7 @@ function gridIndexAt(cx,cy,n){
 function commitOrder(vis){
   const L=cur();
   if(S.settings.hidePosted){const hidden=L.tiles.filter(t=>t.posted);L.tiles=vis.concat(hidden)}else L.tiles=vis;
+  if(!drag)trimBlanks(L);
 }
 function startPointer(e,kind,id,el){
   if(e.button&&e.button!==0)return;
@@ -676,12 +707,12 @@ function activate(cx,cy){
     snap();
     const r=d.el.getBoundingClientRect();d.ox=cx-r.left;d.oy=cy-r.top;
     d.el.classList.add('dragging');
-    d.vis=visible();d.idx=d.vis.findIndex(t=>t.img===d.id);
+    d.vis=visible();d.idx=d.vis.findIndex(t=>tid(t)===d.id);d.far=-1;
     select(d.id,false);
   }else{
     ghost=document.createElement('div');ghost.className='dragghost';ghost.innerHTML='<img alt="" src="'+(urls.get(d.id)||turls.get(d.id))+'">';
     ghost.style.width=m.w+'px';ghost.style.height=m.h+'px';document.body.appendChild(ghost);
-    d.ox=m.w/2;d.oy=m.h/2;d.vis=visible();d.idx=-1;d.snapped=false;
+    d.ox=m.w/2;d.oy=m.h/2;d.vis=visible();d.idx=-1;d.far=-1;
   }
   moveDrag(cx,cy);
 }
@@ -689,15 +720,24 @@ function moveDrag(cx,cy){
   const d=drag,m=metrics(),gr=grid.getBoundingClientRect();
   if(d.kind==='tile'){
     d.el.style.transform='translate('+(cx-d.ox-gr.left)+'px,'+(cy-d.oy-gr.top)+'px)';
-    const idx=gridIndexAt(cx-d.ox+m.w/2,cy-d.oy+m.h/2,d.vis.length-1);
-    if(idx>=0&&idx!==d.idx){d.vis.splice(idx,0,d.vis.splice(d.idx,1)[0]);d.idx=idx;commitOrder(d.vis);renderGrid()}
+    const idx=gridIndexAt(cx-d.ox+m.w/2,cy-d.oy+m.h/2,slotCount()-1);
+    if(idx>=d.vis.length){d.far=idx;highlightSlot(idx)}
+    else{if(d.far>=0){d.far=-1;highlightSlot(-1)}
+      if(idx>=0&&idx!==d.idx){d.vis.splice(idx,0,d.vis.splice(d.idx,1)[0]);d.idx=idx;commitOrder(d.vis);renderGrid()}}
   }else{
     ghost.style.left=(cx-d.ox)+'px';ghost.style.top=(cy-d.oy)+'px';
     // the placeholder is a tile like any other once it is in: same move semantics as a tile drag
-    const idx=gridIndexAt(cx,cy,d.idx>=0?d.vis.length-1:d.vis.length);
-    if(idx<0){if(d.idx>=0){d.vis=d.vis.filter(t=>t.img!==d.id);d.idx=-1;commitOrder(d.vis);renderGrid()}}
-    else if(d.idx<0){d.vis.splice(idx,0,{...newTile(d.id),_temp:true});d.idx=idx;commitOrder(d.vis);renderGrid()}
-    else if(idx!==d.idx){d.vis.splice(idx,0,d.vis.splice(d.idx,1)[0]);d.idx=idx;commitOrder(d.vis);renderGrid()}
+    const idx=gridIndexAt(cx,cy,slotCount()-1);
+    const len=d.vis.length-(d.idx>=0?1:0);
+    if(idx>=len){ // an empty square further down: no shuffling, just light it up
+      if(d.idx>=0){d.vis=d.vis.filter(t=>t.img!==d.id);d.idx=-1;commitOrder(d.vis);renderGrid()}
+      d.far=idx;highlightSlot(idx);
+    }else{
+      if(d.far>=0){d.far=-1;highlightSlot(-1)}
+      if(idx<0){if(d.idx>=0){d.vis=d.vis.filter(t=>t.img!==d.id);d.idx=-1;commitOrder(d.vis);renderGrid()}}
+      else if(d.idx<0){d.vis.splice(idx,0,{...newTile(d.id),_temp:true});d.idx=idx;commitOrder(d.vis);renderGrid()}
+      else if(idx!==d.idx){d.vis.splice(idx,0,d.vis.splice(d.idx,1)[0]);d.idx=idx;commitOrder(d.vis);renderGrid()}
+    }
   }
 }
 function endDrag(cancel){
@@ -705,17 +745,21 @@ function endDrag(cancel){
   try{d.el.releasePointerCapture(d.ptr)}catch(e){}
   if(!d.active)return;
   const L=cur();
+  highlightSlot(-1);
   if(d.kind==='tile'){
     d.el.classList.remove('dragging');
     if(cancel){undo();return}
-    touch(L);save();renderGrid();renderLayouts();
+    if(d.far>=0){const vis=visible();const t=vis.find(t=>tid(t)===d.id);placeAt(vis,t,d.far);commitOrder(vis)}
+    trimBlanks(L);touch(L);save();renderGrid();renderLayouts();
   }else{
     if(ghost){ghost.remove();ghost=null}
     const t=L.tiles.find(t=>t.img===d.id&&t._temp);
     if(t){ if(cancel){L.tiles=L.tiles.filter(x=>x!==t)} else {snap();delete t._temp;hist[hist.length-1]=JSON.stringify(L.tiles.filter(x=>x!==t));touch(L);save();select(d.id,false)} }
-    renderAll();
+    else if(d.far>=0&&!cancel){snap();const vis=visible();placeAt(vis,newTile(d.id),d.far);commitOrder(vis);touch(L);save();select(d.id,false)}
+    trimBlanks(L);renderAll();
   }
 }
+grid.addEventListener('click',e=>{const sl=e.target.closest('.slot');if(sl)pickForSlot(+sl.dataset.i)});
 grid.addEventListener('pointerdown',e=>{const t=e.target.closest('.tile');if(!t||t.classList.contains('temp'))return;startPointer(e,'tile',t.dataset.id,t)});
 $('#lib').addEventListener('pointerdown',e=>{
   if(e.target.classList.contains('del'))return;
@@ -737,7 +781,7 @@ document.addEventListener('pointerup',e=>{
   const d=drag;
   if(!d.active){ // a click
     drag=null;clearTimeout(d.timer);
-    if(d.kind==='tile')select(d.id===selected?null:d.id);
+    if(d.kind==='tile'){const t=cur().tiles.find(t=>tid(t)===d.id);if(t&&!t.img){select(d.id);pickForSlot(d.id);return}select(d.id===selected?null:d.id)}
     else placeAtTop(d.id);
     return;
   }
@@ -753,6 +797,7 @@ const TYPE_NEXT={post:'carousel',carousel:'reel',reel:'post'}, TYPE_LABEL={post:
 function renderTilebar(){
   const bar=$('#tilebar'), t=selTile();
   if(!t){bar.classList.remove('show');return}
+  if(!t.img){bar.innerHTML='<button data-a="pick">Choose picture</button><button data-a="remove" class="danger">Remove</button><button data-a="done">Done</button>';bar.classList.add('show');return}
   bar.innerHTML='<button data-a="posted" class="'+(t.posted?'on':'')+'">Posted</button>'+
     '<button data-a="type">'+(t.type==='post'?'':ICON[t.type==='carousel'?'car':'reel'])+TYPE_LABEL[t.type]+'</button>'+
     '<button data-a="crop">Crop</button><button data-a="top">To top</button><button data-a="bottom">To bottom</button><button data-a="remove" class="danger">Remove</button><button data-a="done">Done</button>';
@@ -761,6 +806,7 @@ function renderTilebar(){
 $('#tilebar').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;const t=selTile();if(!t)return;
   switch(b.dataset.a){
+    case 'pick':pickForSlot(selected);break;
     case 'posted':togglePosted();break;
     case 'type':setType(TYPE_NEXT[t.type]);break;
     case 'crop':openCrop();break;
@@ -773,19 +819,20 @@ $('#tilebar').addEventListener('click',e=>{
 });
 
 /* ---------- tile ops ---------- */
-function selTile(){return cur().tiles.find(t=>t.img===selected)}
+function selTile(){return cur().tiles.find(t=>tid(t)===selected)}
 function moveSel(delta,abs){
-  const L=cur(), vis=visible(), i=vis.findIndex(t=>t.img===selected);if(i<0)return;
+  const L=cur(), vis=visible(), i=vis.findIndex(t=>tid(t)===selected);if(i<0)return;
   let j=abs==='top'?0:abs==='bottom'?vis.length-1:clamp(i+delta,0,vis.length-1);if(j===i)return;
   snap();vis.splice(j,0,vis.splice(i,1)[0]);commitOrder(vis);touch(L);save();renderGrid();renderLayouts();
 }
-function removeSel(){const L=cur(),t=selTile();if(!t)return;snap();L.tiles=L.tiles.filter(x=>x!==t);touch(L);save();selected=null;renderAll();renderTilebar();toast('Taken off the grid. It is still in the library.')}
+function removeSel(){const L=cur(),t=selTile();if(!t)return;snap();L.tiles=L.tiles.filter(x=>x!==t);trimBlanks(L);touch(L);save();selected=null;renderAll();renderTilebar();if(t.img)toast('Taken off the grid. It is still in the library.')}
 function setType(k){const t=selTile();if(!t)return;snap();t.type=k;touch(cur());save();renderGrid();renderInsp();renderTilebar()}
 function togglePosted(){const t=selTile();if(!t)return;snap();t.posted=!t.posted;touch(cur());save();renderGrid();renderInsp();renderTilebar()}
 
 $('#insp').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.t)setType(b.dataset.t);
+  else if(b.id==='inspPick')pickForSlot(selected);
   else if(b.id==='inspCrop')openCrop();
   else if(b.id==='inspTop')moveSel(0,'top');
   else if(b.id==='inspBottom')moveSel(0,'bottom');
@@ -793,6 +840,17 @@ $('#insp').addEventListener('click',e=>{
 });
 $('#insp').addEventListener('change',e=>{if(e.target.id==='inspPosted')togglePosted()});
 $('#insp').addEventListener('input',e=>{if(e.target.id==='inspNote'){const t=selTile();if(t){t.note=e.target.value;touch(cur());save();tileEl(t)}}});
+
+/* pick pictures for one square (a blank tile by id, or a spare square by index) */
+let pendingAt=null;
+function pickForSlot(where){
+  const L=cur();
+  if(typeof where==='number'){const vis=visible();pendingAt=where<vis.length?L.tiles.indexOf(vis[where]):L.tiles.length+(where-vis.length)}
+  else pendingAt=L.tiles.findIndex(t=>tid(t)===where);
+  if(pendingAt<0)pendingAt=L.tiles.length;
+  $('#slotIn').click();
+}
+$('#slotIn').addEventListener('change',e=>{const at=pendingAt==null?0:pendingAt;pendingAt=null;addFiles(e.target.files,at);e.target.value=''});
 
 /* ---------- library ---------- */
 $('#lib').addEventListener('click',async e=>{
@@ -817,13 +875,13 @@ $('#addAllBtn').addEventListener('click',()=>{
 /* file inputs, drop, paste */
 $('#dropZone').addEventListener('click',()=>$('#fileIn').click());
 $('#fileIn').addEventListener('change',e=>{addFiles(e.target.files);e.target.value=''});
-['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();stage.classList.add('over');$('#dropZone').classList.add('over')}));
-document.addEventListener('dragleave',e=>{if(e.relatedTarget===null||e.target===document.documentElement){stage.classList.remove('over');$('#dropZone').classList.remove('over')}});
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();stage.classList.add('over');$('#dropZone').classList.add('over');highlightSlot(e.target.closest&&e.target.closest('#grid')?gridIndexAt(e.clientX,e.clientY,slotCount()-1):-1)}));
+document.addEventListener('dragleave',e=>{if(e.relatedTarget===null||e.target===document.documentElement){stage.classList.remove('over');$('#dropZone').classList.remove('over');highlightSlot(-1)}});
 document.addEventListener('drop',e=>{
   if(!e.dataTransfer||!e.dataTransfer.files.length)return;
-  e.preventDefault();stage.classList.remove('over');$('#dropZone').classList.remove('over');
+  e.preventDefault();stage.classList.remove('over');$('#dropZone').classList.remove('over');highlightSlot(-1);
   let at=0;
-  if(e.target.closest('#grid')){const i=gridIndexAt(e.clientX,e.clientY,visible().length);if(i>=0)at=i}
+  if(e.target.closest('#grid')){const i=gridIndexAt(e.clientX,e.clientY,slotCount()-1);if(i>=0){const vis=visible(),L=cur();at=i<vis.length?L.tiles.indexOf(vis[i]):L.tiles.length+(i-vis.length)}}
   addFiles(e.dataTransfer.files,at,true);
 });
 document.addEventListener('paste',e=>{
@@ -945,7 +1003,7 @@ $('#exportClose').addEventListener('click',()=>$('#exportModal').classList.remov
 $('#orderTxtBtn').addEventListener('click',async()=>{
   const L=cur(), un=L.tiles.filter(t=>!t.posted).slice().reverse();
   if(!un.length){toast('No unposted tiles');return}
-  const lines=[L.name,'Posting order, next first','',...un.map((t,i)=>(i+1)+'. '+(S.images[t.img]?.name||'')+(t.type!=='post'?'  ['+t.type+']':'')+(t.note?'  — '+t.note:''))];
+  const lines=[L.name,'Posting order, next first','',...un.map((t,i)=>(i+1)+'. '+(t.img?(S.images[t.img]?.name||''):'(empty square)')+(t.type!=='post'?'  ['+t.type+']':'')+(t.note?'  — '+t.note:''))];
   const txt=lines.join('\n'), name='posting-order.txt';
   if(downloads){try{await downloads.save({filename:name,data:txt});toast('Saved');return}catch(err){if(err&&err.code==='declined')return}}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=name;a.click();
@@ -1019,8 +1077,8 @@ async function pullCloud(){
     const r=d.data();remoteL.add(d.id);
     if(S.deleted[d.id]&&S.deleted[d.id]>(r.updated||0)){queue('l:'+d.id,()=>db.doc('layouts/'+d.id).delete());continue}
     const l=S.layouts.find(x=>x.id===d.id);
-    if(!l){S.layouts.push({id:d.id,name:r.name||'Layout',tiles:(r.tiles||[]).filter(t=>S.images[t.img]),created:r.created||Date.now(),updated:r.updated||0});changed=true}
-    else if((r.updated||0)>(l.updated||0)){l.name=r.name||l.name;l.tiles=(r.tiles||[]).filter(t=>S.images[t.img]);l.updated=r.updated;changed=true}
+    if(!l){S.layouts.push({id:d.id,name:r.name||'Layout',tiles:(r.tiles||[]).filter(t=>t.img?S.images[t.img]:t.id),created:r.created||Date.now(),updated:r.updated||0});changed=true}
+    else if((r.updated||0)>(l.updated||0)){l.name=r.name||l.name;l.tiles=(r.tiles||[]).filter(t=>t.img?S.images[t.img]:t.id);l.updated=r.updated;changed=true}
   }
   S.layouts.forEach(l=>{if(!remoteL.has(l.id))cloudPushLayout(l.id)});
   if(ss.exists){const r=ss.data();if((r.updated||0)>(S.settings.updated||0)){S.settings={...S.settings,...r,stage:S.settings.stage};changed=true}}
@@ -1102,7 +1160,7 @@ async function boot(){
     if(st){S={...S,...st,settings:{...DEFAULTS,...(st.settings||{})}};S.deleted=S.deleted||{}}
     const ids=Object.keys(S.images);
     await Promise.all(ids.map(async id=>{const b=await iget('blobs',id),t=await iget('thumbs',id);if(b)urls.set(id,URL.createObjectURL(b));if(t)turls.set(id,URL.createObjectURL(t));if(!b&&!t)delete S.images[id]}));
-    S.layouts.forEach(l=>l.tiles=l.tiles.filter(t=>S.images[t.img]&&!t._temp));
+    S.layouts.forEach(l=>l.tiles=l.tiles.filter(t=>(t.img?S.images[t.img]:t.id)&&!t._temp));
   }catch(e){storageWarn(e)}
   if(!S.layouts.length)newLayout('First layout');
   if(!S.layouts.some(l=>l.id===S.current))S.current=S.layouts[0].id;

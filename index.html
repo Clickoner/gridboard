@@ -160,10 +160,12 @@ hr.sep{border:0;border-top:1px solid var(--line-soft);margin:12px 0}
 /* ---- The grid ---- */
 .gridwrap{position:relative;padding:0}
 .grid{position:relative;width:100%;background:var(--ig-gap);touch-action:pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
-.tile{position:absolute;left:0;top:0;overflow:hidden;background:var(--raised);transition:transform .2s cubic-bezier(.2,.7,.2,1);will-change:transform;cursor:grab}
+.tile{position:absolute;left:0;top:0;overflow:hidden;background:var(--raised);scale:1;transition:transform .2s cubic-bezier(.2,.7,.2,1),scale .18s cubic-bezier(.2,.7,.2,1),box-shadow .18s,opacity .18s;will-change:transform;cursor:grab}
 .tile img{width:100%;height:100%;object-fit:cover;pointer-events:none;transform-origin:50% 50%}
-.tile.arm{z-index:15;outline:3px solid var(--accent);outline-offset:-3px;box-shadow:0 10px 24px rgba(0,0,0,.5)}
-.tile.dragging{transition:none;z-index:20;cursor:grabbing;box-shadow:0 14px 30px rgba(0,0,0,.5);transform-origin:center}
+.tile.arm{z-index:15;scale:1.06;outline:3px solid var(--accent);outline-offset:-3px;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+.tile.dragging{transition:scale .18s cubic-bezier(.2,.7,.2,1),box-shadow .18s;z-index:20;scale:1.1;cursor:grabbing;box-shadow:0 18px 36px rgba(0,0,0,.55);outline:3px solid var(--accent);outline-offset:-3px}
+.grid.lifting .tile:not(.dragging):not(.arm){opacity:.6}
+.grid.lifting .tile.blank{opacity:.35}
 .tile.dragging img{filter:brightness(1.02)}
 .tile.temp{outline:2px dashed var(--accent);outline-offset:-2px}
 .tile.blank{background:transparent;outline:1px dashed var(--line);outline-offset:-1px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer}
@@ -279,7 +281,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
   .toast{bottom:auto;top:60px}
   .body[data-tab="grid"] .stage{padding-bottom:120px}
 }
-@media (prefers-reduced-motion: reduce){.tile{transition:none}.toast{transition:none}}
+@media (prefers-reduced-motion: reduce){.tile,.tile.dragging{transition:none}.toast{transition:none}}
 </style>
 
 </head>
@@ -706,12 +708,12 @@ function startPointer(e,kind,id,el){
   if(e.button&&e.button!==0)return;
   drag={kind,id,el,sx:e.clientX,sy:e.clientY,active:false,ptr:e.pointerId,touch:e.pointerType==='touch'};
   if(drag.touch){
-    drag.armT=setTimeout(()=>{if(drag&&!drag.active)el.classList.add('arm')},120);
-    drag.timer=setTimeout(()=>{if(drag&&!drag.active)activate(drag.lx??e.clientX,drag.ly??e.clientY)},220);
+    drag.armT=setTimeout(()=>{if(drag&&!drag.active){el.classList.add('arm');grid.classList.add('lifting')}},100);
+    drag.timer=setTimeout(()=>{if(drag&&!drag.active)activate(drag.lx??e.clientX,drag.ly??e.clientY)},200);
   }
 }
 function activate(cx,cy){
-  const d=drag;d.active=true;d.el.classList.remove('arm');
+  const d=drag;d.active=true;d.el.classList.remove('arm');grid.classList.add('lifting');
   try{d.el.setPointerCapture(d.ptr)}catch(e){}
   lastP={x:cx,y:cy};if(!autoT)autoT=setInterval(autoScroll,16);
   if(navigator.vibrate)try{navigator.vibrate(8)}catch(e){}
@@ -763,7 +765,7 @@ function moveDrag(cx,cy){
   }
 }
 function endDrag(cancel){
-  const d=drag;if(!d)return;drag=null;clearTimeout(d.timer);clearTimeout(d.armT);d.el.classList.remove('arm');if(autoT){clearInterval(autoT);autoT=null}
+  const d=drag;if(!d)return;drag=null;clearTimeout(d.timer);clearTimeout(d.armT);d.el.classList.remove('arm');grid.classList.remove('lifting');if(autoT){clearInterval(autoT);autoT=null}
   try{d.el.releasePointerCapture(d.ptr)}catch(e){}
   if(!d.active)return;
   const L=cur();
@@ -794,7 +796,7 @@ document.addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.ptr)return;
   if(!drag.active){
     const dist=Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy);
-    if(drag.touch){drag.lx=e.clientX;drag.ly=e.clientY;if(dist>14){clearTimeout(drag.timer);clearTimeout(drag.armT);drag.el.classList.remove('arm');drag=null}return}
+    if(drag.touch){drag.lx=e.clientX;drag.ly=e.clientY;if(dist>14){clearTimeout(drag.timer);clearTimeout(drag.armT);drag.el.classList.remove('arm');grid.classList.remove('lifting');drag=null}return}
     if(dist>5)activate(e.clientX,e.clientY);else return;
   }
   e.preventDefault();moveDrag(e.clientX,e.clientY);
@@ -803,7 +805,7 @@ document.addEventListener('pointerup',e=>{
   if(!drag||e.pointerId!==drag.ptr)return;
   const d=drag;
   if(!d.active){ // a click
-    drag=null;clearTimeout(d.timer);clearTimeout(d.armT);d.el.classList.remove('arm');
+    drag=null;clearTimeout(d.timer);clearTimeout(d.armT);d.el.classList.remove('arm');grid.classList.remove('lifting');
     if(d.kind==='tile'){const t=cur().tiles.find(t=>tid(t)===d.id);if(t&&!t.img){select(d.id);pickForSlot(d.id);return}select(d.id===selected?null:d.id)}
     else placeAtTop(d.id);
     return;
@@ -811,7 +813,12 @@ document.addEventListener('pointerup',e=>{
   endDrag(false);
 });
 document.addEventListener('pointercancel',e=>{if(drag&&e.pointerId===drag.ptr)endDrag(true)});
-document.addEventListener('touchmove',e=>{if(drag&&drag.active)e.preventDefault()},{passive:false});
+document.addEventListener('touchmove',e=>{
+  if(!drag)return;
+  if(drag.active){e.preventDefault();return}
+  // the ring is up: a resting finger's wobble must not start a scroll and kill the lift
+  const t=e.touches[0];if(drag.el.classList.contains('arm')&&t&&Math.hypot(t.clientX-drag.sx,t.clientY-drag.sy)<=14)e.preventDefault();
+},{passive:false});
 document.addEventListener('contextmenu',e=>{if(drag||e.target.closest('.tile,.lib .it'))e.preventDefault()});
 document.addEventListener('dragstart',e=>{if(e.target.closest&&e.target.closest('.tile,.lib .it'))e.preventDefault()});
 

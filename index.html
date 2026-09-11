@@ -50,6 +50,7 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.4;overflow:hidden;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -74,6 +75,7 @@ img{max-width:100%;display:block}
 /* ---- Buttons ---- */
 .btn{border:1px solid var(--line);background:var(--raised);border-radius:6px;padding:6px 10px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
+a.btn{text-decoration:none}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
 .btn.primary:hover{filter:brightness(1.06)}
 .btn.ghost{background:transparent}
@@ -226,6 +228,14 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--raised);border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:120;pointer-events:none;box-shadow:var(--shadow)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ---- Tile action bar (phones: the inspector is on another tab) ---- */
+.tilebar{display:none;position:fixed;left:0;right:0;bottom:54px;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:8px 10px;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tilebar button{flex:none;border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.tilebar button.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.tilebar button.danger{color:var(--danger)}
+.tilebar button svg{width:14px;height:14px;fill:currentColor}
+.tile.fresh{transition:none}
+.mob{display:none}
 /* ---- Mobile ---- */
 .tabs{display:none}
 @media (max-width:860px){
@@ -244,6 +254,14 @@ input[type=range]{accent-color:var(--accent);width:100%}
   .tabs button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6}
   .tabs button.on{color:var(--accent)}
   .top .desk{display:none}
+  .top{gap:8px;padding:0 10px}
+  .brand span{display:none}
+  .sync span{display:none}
+  .sync{padding:6px}
+  .btn .long{display:none}
+  .mob{display:block}
+  .tilebar.show{display:flex}
+  .body[data-tab="grid"] .stage{padding-bottom:120px}
 }
 @media (prefers-reduced-motion: reduce){.tile{transition:none}.toast{transition:none}}
 </style>
@@ -258,7 +276,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
     <div class="seg desk" id="stageSeg"><button data-v="phone" class="on">Phone</button><button data-v="board">Board</button></div>
     <div class="seg" id="ratioSeg"><button data-v="4:5" class="on">4:5</button><button data-v="1:1">1:1</button></div>
     <button class="btn ghost sm desk" id="undoBtn" title="Undo (⌘Z)">Undo</button>
-    <button class="btn sm" id="exportBtn">Save grid image</button>
+    <button class="btn sm" id="exportBtn">Save<span class="long">&nbsp;grid image</span></button>
     <button class="btn ghost sm desk" id="keysBtn" title="Keyboard shortcuts (?)">?</button>
     <button class="btn ghost sm" id="aboutBtn" hidden>About</button>
     <button class="sync" id="sync" title="Where this board is stored"><i></i><span>On this device</span></button>
@@ -275,6 +293,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
           <button class="btn sm" id="addAllBtn">Place all unplaced</button>
         </div>
         <div class="lib" id="lib"></div>
+        <div class="hint mob" style="margin-bottom:10px">Tap a picture to add it to the top of the grid, then arrange it there.</div>
         <div class="lib-empty" id="libEmpty">Nothing here yet. JPG, PNG, WebP work; HEIC from an iPhone needs converting first.</div>
       </div>
     </aside>
@@ -344,7 +363,9 @@ input[type=range]{accent-color:var(--accent);width:100%}
     <button data-tab="library"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>Library</button>
     <button data-tab="grid" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Grid</button>
     <button data-tab="layouts"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Layouts</button>
+    <button data-act="undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
   </nav>
+  <div class="tilebar" id="tilebar"></div>
 </div>
 
 <!-- Crop editor -->
@@ -429,7 +450,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
     <h2>Grid image</h2>
     <div class="sub" id="exportSub"></div>
     <div class="export-preview"><img id="exportImg" alt="Exported grid"></div>
-    <div class="foot"><button class="btn ghost" id="exportClose">Close</button><a class="btn primary" id="exportDl" download="gridboard.png">Download</a></div>
+    <div class="foot"><button class="btn ghost" id="exportClose">Close</button><button class="btn" id="exportShare" hidden>Share…</button><a class="btn primary" id="exportDl" download="gridboard.png">Download</a></div>
   </div>
 </div>
 
@@ -497,6 +518,7 @@ async function addFiles(files,at=0,toGrid=true){
   const L=cur(); if(toGrid)snap();
   let added=0,skipped=0;
   for(const f of list){
+    if(list.length>3)toast('Adding '+(added+skipped+1)+' of '+list.length+'…');
     let bm;try{bm=await decode(f)}catch(e){skipped++;continue}
     const id=uid();
     const w=bm.width,h=bm.height;
@@ -510,7 +532,10 @@ async function addFiles(files,at=0,toGrid=true){
   }
   if(toGrid)touch(L); save(); renderAll();
   toast(added+' added'+(skipped?', '+skipped+' could not be read (HEIC?)':''));
+  let hinted=false;try{hinted=!!localStorage.getItem('gridboard.hint')}catch(e){}
+  if(toGrid&&added&&!hinted){try{localStorage.setItem('gridboard.hint','1')}catch(e){}setTimeout(()=>toast(isTouch()?'Hold a tile to drag it. Tap one for options.':'Drag tiles to reorder. Click one for options.',4000),2400)}
 }
+const isTouch=()=>matchMedia('(pointer:coarse)').matches;
 const newTile=img=>({img,type:'post',posted:false,crop:{x:.5,y:.5,z:1},note:''});
 
 /* ---------- layouts ---------- */
@@ -540,7 +565,7 @@ function tileEl(t){
     el=document.createElement('div');el.className='tile';el.dataset.id=t.img;
     el.innerHTML='<img alt=""><span class="note"></span><span class="mk car">'+ICON.car+'</span><span class="mk reel">'+ICON.reel+'</span><span class="ord"></span><span class="pst">Posted</span>';
     el.querySelector('img').src=urls.get(t.img)||turls.get(t.img)||'';
-    tileEls.set(t.img,el);
+    tileEls.set(t.img,el);el.classList.add('fresh');requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('fresh')));
   }
   el.classList.toggle('carousel',t.type==='carousel');el.classList.toggle('reel',t.type==='reel');
   el.classList.toggle('posted',!!t.posted);el.classList.toggle('temp',!!t._temp);el.classList.toggle('sel',selected===t.img);
@@ -723,7 +748,29 @@ document.addEventListener('touchmove',e=>{if(drag&&drag.active)e.preventDefault(
 document.addEventListener('contextmenu',e=>{if(drag||e.target.closest('.tile,.lib .it'))e.preventDefault()});
 
 function placeAtTop(id){const L=cur();if(L.tiles.some(t=>t.img===id))return;snap();L.tiles.unshift(newTile(id));touch(L);save();select(id,false);renderAll();toast('Placed at the top')}
-function select(id,render=true){selected=id;if(render){renderGrid();renderInsp()}else{tileEls.forEach((el,k)=>el.classList.toggle('sel',k===id))}}
+function select(id,render=true){selected=id;if(render){renderGrid();renderInsp()}else{tileEls.forEach((el,k)=>el.classList.toggle('sel',k===id))}renderTilebar()}
+const TYPE_NEXT={post:'carousel',carousel:'reel',reel:'post'}, TYPE_LABEL={post:'Post',carousel:'Carousel',reel:'Reel'};
+function renderTilebar(){
+  const bar=$('#tilebar'), t=selTile();
+  if(!t){bar.classList.remove('show');return}
+  bar.innerHTML='<button data-a="posted" class="'+(t.posted?'on':'')+'">Posted</button>'+
+    '<button data-a="type">'+(t.type==='post'?'':ICON[t.type==='carousel'?'car':'reel'])+TYPE_LABEL[t.type]+'</button>'+
+    '<button data-a="crop">Crop</button><button data-a="top">To top</button><button data-a="bottom">To bottom</button><button data-a="remove" class="danger">Remove</button><button data-a="done">Done</button>';
+  bar.classList.add('show');
+}
+$('#tilebar').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const t=selTile();if(!t)return;
+  switch(b.dataset.a){
+    case 'posted':togglePosted();break;
+    case 'type':setType(TYPE_NEXT[t.type]);break;
+    case 'crop':openCrop();break;
+    case 'top':moveSel(0,'top');break;
+    case 'bottom':moveSel(0,'bottom');break;
+    case 'remove':removeSel();break;
+    case 'done':select(null);break;
+  }
+  renderTilebar();
+});
 
 /* ---------- tile ops ---------- */
 function selTile(){return cur().tiles.find(t=>t.img===selected)}
@@ -732,9 +779,9 @@ function moveSel(delta,abs){
   let j=abs==='top'?0:abs==='bottom'?vis.length-1:clamp(i+delta,0,vis.length-1);if(j===i)return;
   snap();vis.splice(j,0,vis.splice(i,1)[0]);commitOrder(vis);touch(L);save();renderGrid();renderLayouts();
 }
-function removeSel(){const L=cur(),t=selTile();if(!t)return;snap();L.tiles=L.tiles.filter(x=>x!==t);touch(L);save();selected=null;renderAll()}
-function setType(k){const t=selTile();if(!t)return;snap();t.type=k;touch(cur());save();renderGrid();renderInsp()}
-function togglePosted(){const t=selTile();if(!t)return;snap();t.posted=!t.posted;touch(cur());save();renderGrid();renderInsp()}
+function removeSel(){const L=cur(),t=selTile();if(!t)return;snap();L.tiles=L.tiles.filter(x=>x!==t);touch(L);save();selected=null;renderAll();renderTilebar();toast('Taken off the grid. It is still in the library.')}
+function setType(k){const t=selTile();if(!t)return;snap();t.type=k;touch(cur());save();renderGrid();renderInsp();renderTilebar()}
+function togglePosted(){const t=selTile();if(!t)return;snap();t.posted=!t.posted;touch(cur());save();renderGrid();renderInsp();renderTilebar()}
 
 $('#insp').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
@@ -807,12 +854,12 @@ $('#undoBtn').addEventListener('click',undo);
 $('#keysBtn').addEventListener('click',()=>$('#keysModal').classList.add('open'));
 $('#keysClose').addEventListener('click',()=>$('#keysModal').classList.remove('open'));
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#body').dataset.tab=b.dataset.tab;$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));if(b.dataset.tab==='grid')requestAnimationFrame(()=>renderGrid())});
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.act==='undo'){undo();toast(hist.length?'Undone':'Nothing to undo');return}$('#body').dataset.tab=b.dataset.tab;$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));if(b.dataset.tab==='grid')requestAnimationFrame(()=>renderGrid())});
 window.addEventListener('resize',()=>renderGrid());
 new ResizeObserver(()=>renderGrid()).observe(grid);
 
 /* layouts */
-$('#layouts').addEventListener('click',e=>{const d=e.target.closest('.lay');if(!d)return;S.current=d.dataset.id;selected=null;hist=[];redo=[];save();renderAll()});
+$('#layouts').addEventListener('click',e=>{const d=e.target.closest('.lay');if(!d)return;S.current=d.dataset.id;selected=null;hist=[];redo=[];save();renderAll();renderTilebar()});
 $('#layName').addEventListener('input',e=>{const L=cur();L.name=e.target.value;touch(L);save();renderLayouts();$('#layName').value=L.name});
 $('#dupBtn').addEventListener('click',()=>{const L=cur();newLayout(L.name+' (copy)',JSON.parse(JSON.stringify(L.tiles)));touch(cur());hist=[];redo=[];save();renderAll();$('#layName').select()});
 $('#newBtn').addEventListener('click',()=>{const L=cur();const keep=L.tiles.filter(t=>t.posted).map(t=>JSON.parse(JSON.stringify(t)));newLayout('',keep);touch(cur());hist=[];redo=[];save();renderAll();$('#layName').select();if(keep.length)toast('New layout, keeping the posted tiles')});
@@ -887,7 +934,10 @@ async function exportPNG(){
     catch(err){if(err&&err.code==='declined')return;if(err&&err.code!=='rate_limited')console.warn(err)}
   }
   const u=URL.createObjectURL(blob);$('#exportImg').src=u;$('#exportDl').href=u;$('#exportDl').download=name;
-  $('#exportSub').textContent=c.width+' × '+c.height+' px. '+(window.top!==window?'If the download button does nothing here, right-click the picture and save it.':'');
+  const file=new File([blob],name,{type:'image/png'});
+  const canShare=!!(navigator.canShare&&navigator.canShare({files:[file]}));
+  $('#exportShare').hidden=!canShare;$('#exportShare').onclick=()=>navigator.share({files:[file],title:'Gridboard'}).catch(()=>{});
+  $('#exportSub').textContent=c.width+' × '+c.height+' px. '+(window.top!==window?'If the download button does nothing here, right-click the picture and save it.':canShare&&isTouch()?'Share saves it to your photos.':'');
   $('#exportModal').classList.add('open');
 }
 $('#exportBtn').addEventListener('click',exportPNG);
@@ -902,7 +952,7 @@ $('#orderTxtBtn').addEventListener('click',async()=>{
 });
 
 /* ---------- toast ---------- */
-let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
+let toastT;function toast(m,ms){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms||2200)}
 
 /* ---------- cloud sync: Claude's store inside the artifact, otherwise a board link on Supabase ---------- */
 const SB_FN='https://snsypfnlfgyjxkzllgan.supabase.co/functions/v1/gridboard';
@@ -941,7 +991,7 @@ function queue(key,fn){cloud.q.set(key,fn);clearTimeout(cloud.t);cloud.t=setTime
 async function flush(){
   if(!cloud.db||!cloud.q.size)return;
   const jobs=[...cloud.q.values()];cloud.q.clear();syncUI('busy','Syncing…');
-  try{for(const j of jobs)await j();syncUI('on','Synced')}catch(e){console.warn('sync',e);syncUI('err',e&&e.code==='quota_exceeded'?'Cloud is full':'Sync failed')}
+  try{for(const j of jobs)await j();syncUI('on','Synced')}catch(e){console.warn('sync',e);if(e&&e.code==='not_found'){boardGone();return}syncUI('err',e&&e.code==='quota_exceeded'?'Cloud is full':'Sync failed')}
 }
 function cloudPushLayout(id){if(!cloud.db)return;queue('l:'+id,async()=>{const l=S.layouts.find(x=>x.id===id);if(!l)return;await cloud.db.doc('layouts/'+id).set({name:l.name,tiles:l.tiles.filter(t=>!t._temp),created:l.created,updated:l.updated})})}
 function cloudPushSettings(){if(!cloud.db)return;queue('s',async()=>{await cloud.db.doc('settings/main').set({...S.settings})})}
@@ -989,7 +1039,7 @@ function startPolling(){
 }
 async function connect(db,via){
   cloud.db=db;cloud.via=via;syncUI('busy','Connecting…');
-  try{await pullCloud();syncUI('on','Synced');await flush()}catch(e){console.warn('cloud',e);syncUI('err',e&&e.code==='not_found'?'Board gone':'Cloud unavailable');if(e&&e.code==='not_found'){cloud.db=null;rememberToken(null)}}
+  try{await pullCloud();syncUI('on','Synced');await flush()}catch(e){console.warn('cloud',e);if(e&&e.code==='not_found'){boardGone();return}syncUI('err','Cloud unavailable')}
   startPolling();
 }
 async function initCloud(){
@@ -1019,6 +1069,7 @@ async function joinBoard(text){
   rememberToken(token);await connect(boardBackend(token),'board');
   if(cloud.db){S.layouts.forEach(l=>cloudPushLayout(l.id));for(const id of Object.keys(S.images)){const b=await iget('blobs',id);if(b)cloudPushImage(id,b)}await flush();renderSyncPanel();toast('Joined')}
 }
+function boardGone(){if(cloud.via!=='board')return;stopSync();toast('That board link no longer exists. This device is on its own copy again.',4000)}
 function stopSync(){cloud.db=null;cloud.via=null;rememberToken(null);cloud.q.clear();syncUI('','On this device');renderSyncPanel()}
 let qrLib=null;
 function drawQR(){
